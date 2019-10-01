@@ -183,12 +183,14 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
+        # https://github.com/coreos/flannel/blob/master/Documentation/troubleshooting.md
         image: quay.io/coreos/flannel:v0.11.0-arm
         command:
         - /opt/bin/flanneld
         args:
         - --ip-masq
         - --kube-subnet-mgr
+        - -v=10
         resources:
           requests:
             cpu: "100m"
