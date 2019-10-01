@@ -1,2 +1,6 @@
 
-sudo ip link del cni0; sudo ip link del flannel.1
+ip link del cni0
+ip link del flannel.1
+
+kubectl delete pod --selector=app=flannel      -n kube-system
+kubectl delete pod --selector=k8s-app=kube-dns -n kube-system
