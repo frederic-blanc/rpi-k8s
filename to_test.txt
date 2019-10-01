@@ -1,0 +1,2 @@
+
+sudo ip link del cni0; sudo ip link del flannel.1
