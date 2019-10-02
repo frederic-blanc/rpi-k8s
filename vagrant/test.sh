@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/
+# https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/
 
 kubectl run hostnames --image=k8s.gcr.io/serve_hostname \
                         --labels=app=hostnames \
@@ -17,7 +17,6 @@ kubectl get svc hostnames
 #done
 
 curl "http://$(kubectl get svc hostnames -o jsonpath="{.spec.clusterIP}"):$(kubectl get svc hostnames -o jsonpath="{.spec.ports[0].port}")"
-
 
 for ip in $(kubectl get endpoints hostnames -o jsonpath="{.subsets[0].addresses[*].ip}"); do
     kubectl run -it --rm --restart=Never alpine --image=alpine -- wget -qO- "http://${ip}:$(kubectl get endpoints hostnames -o jsonpath="{.subsets[0].ports[0].port}")"
