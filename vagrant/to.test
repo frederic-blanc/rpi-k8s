@@ -1,0 +1,15 @@
+kubectl run hostnames --image=k8s.gcr.io/serve_hostname \
+                        --labels=app=hostnames \
+                        --port=9376 \
+                        --replicas=2
+kubectl get pods -l app=hostnames
+
+kubectl expose deployment hostnames --port=80 --target-port=9376
+kubectl get svc hostnames
+
+kubectl describe svc hostnames
+    curl <SERVICE_IP>:80
+
+kubectl get endpoints hostnames
+    kubectl run -it --rm --restart=Never alpine --image=alpine sh
+    wget -qO- <POD_IP>:9376
