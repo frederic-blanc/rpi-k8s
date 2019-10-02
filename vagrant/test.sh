@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #https://kubernetes.io/docs/tasks/debug-application-cluster/debug-service/
 
 kubectl run hostnames --image=k8s.gcr.io/serve_hostname \
