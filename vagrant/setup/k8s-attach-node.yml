@@ -1,0 +1,26 @@
+---
+- hosts: 
+  - "{{ node_name }}"
+  become: true
+  tasks:
+  - name: Set default value for plugin
+    set_fact:  
+      plugin: "calico"
+    when: plugin|length < 1
+  
+  - name: use iptables-legacy for calico only
+    alternatives:
+      name: iptables 
+      path: /usr/sbin/iptables-legacy
+    when: plugin == "calico"
+  
+  - name:
+    sysctl:
+      name:  net.bridge.bridge-nf-call-iptables
+      value: 1
+      state: present
+    when: plugin == "flannel" or plugin == "weave"
+
+  - name: add node to the cluster
+    shell: kubeadm join --token "{{ k8s_token }}" {{ master_ip }}:6443 --discovery-token-unsafe-skip-ca-verification
+  
