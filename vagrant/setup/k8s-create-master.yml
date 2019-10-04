@@ -37,13 +37,16 @@
   
   - name: Install calico pod network
     command: kubectl create -f "https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+    become:  false
     when:    plugin == "calico"
   
   - name: Install calico pod network
     command: kubectl create -f "https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml"
+    become:  false
     when:    plugin == "flannel"
   
   - name: Install calico pod network
     command: kubectl create -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.WEAVE_MTU=8912"
+    become:  false
     when:    plugin == "weave"
   
