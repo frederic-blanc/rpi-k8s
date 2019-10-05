@@ -8,21 +8,8 @@
       plugin: "calico"
     when: plugin|length < 1
   
-  - name: use iptables-legacy for calico only
-    alternatives:
-      name: iptables 
-      path: /usr/sbin/iptables-legacy
-    when: plugin == "calico"
-  
-  - name:
-    sysctl:
-      name:  net.bridge.bridge-nf-call-iptables
-      value: 1
-      state: present
-    when: plugin == "flannel" or plugin == "weave"
-  
   - name: set pod-network-cidr arg
-    setFact:
+    set_fact:
       pod_network_cidr_arg: "{% if plugin=='calico' %}--pod-network-cidr=\"192.168.0.0/16\"{% elif plugin=='flannel'%}--pod-network-cidr=\"10.244.0.0/16\"{% endif %}"
   
   - name: Initialize the Kubernetes cluster using kubeadm
@@ -37,16 +24,16 @@
   
   - name: Install calico pod network
     command: kubectl create -f "https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
-    become:  false
+    become: false
     when:    plugin == "calico"
   
-  - name: Install calico pod network
+  - name: Install flannel pod network
     command: kubectl create -f "https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml"
-    become:  false
+    become: false
     when:    plugin == "flannel"
   
-  - name: Install calico pod network
+  - name: Install weave pod network
     command: kubectl create -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.WEAVE_MTU=8912"
-    become:  false
+    become: false
     when:    plugin == "weave"
   

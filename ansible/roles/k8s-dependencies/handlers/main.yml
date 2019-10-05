@@ -1,0 +1,11 @@
+---
+- name: docker status
+  service: 
+    name:  docker
+    state: started
+  
+- name: kubelet status
+  service: 
+    name:  kubelet
+    state: started
+  

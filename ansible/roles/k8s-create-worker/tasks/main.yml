@@ -1,0 +1,16 @@
+---
+- name: Copy the join command to server location
+  copy: 
+    src:  join-command
+    dest: /tmp/join-command.sh
+    mode: 0700
+  become: true
+  
+- name: Reset the Kubernetes cluster using kubeadm
+  command: kubeadm reset -f
+  become: true
+  
+- name: Join the node to cluster
+  command: sh /tmp/join-command.sh
+  become: true
+  

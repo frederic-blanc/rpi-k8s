@@ -1,0 +1,20 @@
+---
+docker:
+  cgroupdriver:       "systemd"
+  concurrent_uploads: 1
+  storage_driver:     "overlay2"
+  repository:
+    deb_arch: armhf
+    dist:     raspbian
+    version:  buster
+    channel:  stable
+  users:
+  - pi
+  
+k8s:
+  repository:
+    deb_arch: armhf
+    dist:     raspbian
+    version:  kubernetes-xenial
+    channel:  main
+  

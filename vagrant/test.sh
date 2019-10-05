@@ -21,3 +21,4 @@ curl "http://$(kubectl get svc hostnames -o jsonpath="{.spec.clusterIP}"):$(kube
 for ip in $(kubectl get endpoints hostnames -o jsonpath="{.subsets[0].addresses[*].ip}"); do
     kubectl run -it --rm --restart=Never alpine --image=alpine -- wget -qO- "http://${ip}:$(kubectl get endpoints hostnames -o jsonpath="{.subsets[0].ports[0].port}")"
 done
+

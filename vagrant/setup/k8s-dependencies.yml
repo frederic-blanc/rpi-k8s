@@ -18,18 +18,22 @@
       - software-properties-common
       - tree
       - dnsutils
+      - conntrack
+      - ebtables
+      - ethtool
+      - socat
   
   - name: Add an apt signing key for Docker
     apt_key:
-      url: https://download.docker.com/linux/ubuntu/gpg
+      url: https://download.docker.com/linux/debian/gpg
       state: present
   
   - name: Add apt repository for stable version
     apt_repository:
-      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
       state: present
   
-  - name: Install docker and its dependecies
+  - name: Install docker and its dependencies
     apt: 
       name: "{{ packages }}"
       state: present
@@ -61,7 +65,7 @@
       name:  docker
     when: daemon.changed
     notify:
-      - docker status
+    - docker status
   
   - name: Add vagrant user to docker group
     user:
@@ -81,6 +85,23 @@
     command: swapoff -a
     when: ansible_swaptotal_mb > 0
   
+  - name: use iptables-legacy
+    alternatives:
+      name: "{{ item }}"
+      path: "/usr/sbin/{{ item }}-legacy"
+    with_items:
+    - "iptables"
+    - "ip6tables"
+    - "ebtables"
+    register: iptables_legacy
+  
+  - name: set net.bridge.bridge-nf-call-iptables to 1
+    sysctl:
+      name:  net.bridge.bridge-nf-call-iptables
+      value: 1
+      state: present
+    register: disable_sysctl
+  
   - name: Add an apt signing key for Kubernetes
     apt_key:
       url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
@@ -99,26 +120,28 @@
       update_cache: yes
     vars:
       packages:
+        - cri-tools
         - kubelet
         - kubeadm
         - kubectl
         - kubernetes-cni
+    notify:
+    - kubelet status
   
-  - name: Configure node ip
+  - name: Configure default kubelet ip
     lineinfile:
       path:   "/etc/default/kubelet"
-      line:   "KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}"
+      line:   "KUBELET_EXTRA_ARGS='--node-ip={{ node_ip }} --cgroup-driver=cgroupfs'"
       create: yes
-  
-  - name: Restart kubelet
-    service:
-      name: kubelet
-      daemon_reload: yes
-      state: restarted
+    register: kubelet_default
   
   handlers:
     - name: docker status
       service: 
         name:  docker
+        state: started
+    - name: kubelet status
+      service: 
+        name:  kubelet
         state: started
   
