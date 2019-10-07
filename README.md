@@ -16,7 +16,7 @@ vagrant file only for debbuging network plugin
   - cgroup_enable=cpuset
   - cgroup_enable=memory
   - cgroup_memory=1
-  - swapaccount=1  # to be checked
+  - swapaccount=1  # see https://unix.stackexchange.com/questions/531480/what-does-swapaccount-1-in-grub-cmdline-linux-default-do#answer-531489
 - use own certificate authorities:  kubeadm xxxx --cert-dir /etc/kubernetes/pki
   - define /etc/kubernetes/pki/ca.crt and /etc/kubernetes/pki/ca.key
   
