@@ -25,7 +25,7 @@ vagrant file only for debbuging network plugin
 - install kubernetes dashboard UI
   - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
   - create kubernetes-dashboard-ext.yml file
-    ```
+    ```yaml
     ---
     kind: Service
     apiVersion: v1
