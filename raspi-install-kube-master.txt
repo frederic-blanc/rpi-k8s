@@ -2,9 +2,6 @@
 sudo su -
 passwd root
 
-adduser fanarie
-
-
 if ! ( cat /boot/cmdline.txt | tr -s ' ' '\n'  | grep -qq ipv6.disable=1        ); then cp -f /boot/cmdline.txt /boot/cmdline.txt.tmp ; (cat /boot/cmdline.txt.tmp | tr -s ' ' '\n' | sed '$a ipv6.disable=1'       | tr -s '\n' ' ' ; echo -en '\n') > /boot/cmdline.txt ; rm -f /boot/cmdline.txt.tmp ;fi
 if ! ( cat /boot/cmdline.txt | tr -s ' ' '\n'  | grep -qq cgroup_enable=cpuset  ); then cp -f /boot/cmdline.txt /boot/cmdline.txt.tmp ; (cat /boot/cmdline.txt.tmp | tr -s ' ' '\n' | sed '$a cgroup_enable=cpuset' | tr -s '\n' ' ' ; echo -en '\n') > /boot/cmdline.txt ; rm -f /boot/cmdline.txt.tmp ;fi
 if ! ( cat /boot/cmdline.txt | tr -s ' ' '\n'  | grep -qq cgroup_memory=1       ); then cp -f /boot/cmdline.txt /boot/cmdline.txt.tmp ; (cat /boot/cmdline.txt.tmp | tr -s ' ' '\n' | sed '$a cgroup_memory=1'      | tr -s '\n' ' ' ; echo -en '\n') > /boot/cmdline.txt ; rm -f /boot/cmdline.txt.tmp ;fi
@@ -43,14 +40,14 @@ sed -i 's/# alias l=/alias  l=/'    ~/.bashrc
 
 echo 'set mouse-=a' > ~/.vimrc
 
-hostnamectl set-hostname k8s-master.yggdrasil.local
+hostnamectl set-hostname k8s-master
 
 sed -i '/^::1[[:space:]]/d'                                         /etc/hosts
 sed -i '/^ff02::1[[:space:]]/d'                                     /etc/hosts
 sed -i '/^ff02::2[[:space:]]/d'                                     /etc/hosts
 sed -i '/raspberrypi/d'                                             /etc/hosts
 echo "127.0.1.1       k8s-master"                               >>  /etc/hosts
-echo "192.168.1.21    k8s-master k8s-master.yggdrasil.local "   >>  /etc/hosts
+echo "192.168.1.21    k8s-master"                               >>  /etc/hosts
 
 echo ''                                             >> /etc/dhcpcd.conf
 echo 'interface eth0'                               >> /etc/dhcpcd.conf
@@ -58,16 +55,14 @@ echo 'static    ip_address=192.168.1.21'            >> /etc/dhcpcd.conf
 echo 'static    routers=192.168.1.1'                >> /etc/dhcpcd.conf
 echo 'static    domain_name_servers=192.168.1.254'  >> /etc/dhcpcd.conf
 
-usermod -aG sudo fanarie
-
-echo ''                             >>  /home/fanarie/.bashrc
-echo 'alias ls="ls $LS_OPTIONS"'    >>  /home/fanarie/.bashrc
-echo 'alias ll="ls $LS_OPTIONS -l"' >>  /home/fanarie/.bashrc
-echo 'alias  l="ls $LS_OPTIONS -lA"'>>  /home/fanarie/.bashrc
-echo ''                             >>  /home/fanarie/.bashrc
-echo 'PS1="\[\033[38;5;22m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;3m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]"'                           >>  /home/fanarie/.bashrc
-echo 'set mouse-=a' > /home/fanarie/.vimrc
-chown fanarie:fanarie /home/fanarie/.vimrc
+echo ''                             >>  /home/pi/.bashrc
+echo 'alias ls="ls $LS_OPTIONS"'    >>  /home/pi/.bashrc
+echo 'alias ll="ls $LS_OPTIONS -l"' >>  /home/pi/.bashrc
+echo 'alias  l="ls $LS_OPTIONS -lA"'>>  /home/pi/.bashrc
+echo ''                             >>  /home/pi/.bashrc
+echo 'PS1="\[\033[38;5;22m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;3m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]"'                           >>  /home/pi/.bashrc
+echo 'set mouse-=a' > /home/pi/.vimrc
+chown pi:pi           /home/fanarie/.vimrc
 
 passwd -l pi
 
@@ -79,7 +74,7 @@ reboot
 
 su -
 curl -sSL https://get.docker.com | sh
-usermod -aG docker fanarie
+usermod -aG docker pi
 
 cat > /etc/docker/daemon.json <<EOF
 {
@@ -108,24 +103,6 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 echo 'deb [arch=armhf] https://packages.cloud.google.com/apt/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
 apt-get update
 
-docker  volume  create  registry
-docker  run -d   --restart=always       --name registry                                     \
-                -v /etc/docker/certs:/certs                                                 \
-                -v registry:/var/lib/registry                                               \
-                -e REGISTRY_HTTP_ADDR=0.0.0.0:443                                           \
-                -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/k8s-cluster.yggdrasil.local.pem     \
-                -e REGISTRY_HTTP_TLS_KEY=/certs/k8s-cluster.yggdrasil.local.key             \
-                -p 443:443                                                                  \
-                registry:2
-
-umask 022 ; mkdir -p /etc/docker/certs.d/kube-master.yggdrasil.local
-
-#systemctl daemon-reload ;sudo systemctl stop kubelet
-#kubeadm reset -f
-#apt-get remove  kubectl kubeadm kubernetes-cni kubelet  -y
-#rm -rf /var/lib/etcd /var/lib/kubelet /etc/cni/net.d /var/lib/dockershim /var/run/kubernetes /var/lib/cni /etc/cni
-#rm -rf $HOME/.kube
-#apt autoremove -y
 
 apt-get install kubelet kubeadm kubectl kubernetes-cni  -y
 
@@ -135,53 +112,20 @@ kubeadm config images pull
 
 ### Weave ###################
 kubeadm init --apiserver-advertise-address=192.168.1.21
-
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.WEAVE_MTU=8912"
-kubectl patch daemonset weave-net   --namespace=kube-system         \
-                        --patch='{"spec":{"template":{"spec":{"tolerations":[{"key": "node-role.kubernetes.io/master", "operator": "Exists", "effect": "NoSchedule"},{"effect":"NoSchedule","operator":"Exists"}]}}}}'
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+kubectl apply -f kube-flannel.yml
 systemctl restart kubelet
-#############################
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.WEAVE_MTU=8912"
 
-### flannel #################       #--pod-network-cidr=10.244.0.0/16
-
+### flannel #################
 kubeadm init  --apiserver-advertise-address=192.168.1.21 --pod-network-cidr=10.244.0.0/16
 mkdir -p $HOME/.kube
 cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl apply -f kube-flannel.yml
 systemctl restart kubelet
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
-kubectl label node k8s-node-1.yggdrasil.local node-role.kubernetes.io/worker=worker
-kubectl label node k8s-node-2.yggdrasil.local node-role.kubernetes.io/worker=worker
-kubectl taint nodes --all node-role.kubernetes.io/master-
-
-#kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-#kubectl patch daemonset kube-flannel-ds-arm         \
-#                        --namespace=kube-system     \
-#                        --patch='{"spec":{"template":{"spec":{"tolerations":[{"key": "node-role.kubernetes.io/master", "operator": "Exists", "effect": "NoSchedule"},{"effect":"NoSchedule","operator":"Exists"}]}}}}'
-#ip link delete flannel.1
-#
-#      tolerations:
-#      - effect: NoSchedule
-#        key: node-role.kubernetes.io/master
-#        operator: Exists
-#      - effect: NoSchedule
-#        operator: Exists
-#############################
-
-mkdir -p $HOME/.kube
-cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
-
-mkdir -p $HOME/.kube
-sudo cp -if /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-kubeadm join 192.168.1.21:6443 --token mrir8w.5e10fxh69xksa2sd \
-    --discovery-token-ca-cert-hash sha256:88e2243edfb77a51c29b845e8d0c90c5c35d99001e8860c33b80f99fb548eee6
-
-
-    
-kubectl label node k8s-node-1.yggdrasil.local node-role.kubernetes.io/worker=worker
-kubectl label node k8s-node-2.yggdrasil.local node-role.kubernetes.io/worker=worker
-
+#kubectl label node k8s-node-1 node-role.kubernetes.io/worker=worker
