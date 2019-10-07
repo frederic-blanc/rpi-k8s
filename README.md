@@ -60,7 +60,8 @@ vagrant file only for debbuging network plugin
     subjects:
     - kind: ServiceAccount
       name: admin-user
-      namespace: kubernetes-dashboard```
+      namespace: kubernetes-dashboard
+    ```
   - kubectl apply -f kubernetes-dashboard-ext.yml
   - generate secret
   ```kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')```
