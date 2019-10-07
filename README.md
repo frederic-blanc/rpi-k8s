@@ -23,7 +23,7 @@ vagrant file only for debbuging network plugin
   - define /etc/kubernetes/pki/ca.crt and /etc/kubernetes/pki/ca.key
   
 - install kubernetes dashboard UI
-  - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+  - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
   - create kubernetes-dashboard-ext.yml file
     ```
     ---
