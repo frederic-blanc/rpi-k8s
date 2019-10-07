@@ -64,9 +64,9 @@ vagrant file only for debbuging network plugin
     ```
   - kubectl apply -f kubernetes-dashboard-ext.yml
   - generate secret
-  ```shell
+    ```{r, engine='bash', count_lines}
   kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
-  ```
+    ```
 
 
 
