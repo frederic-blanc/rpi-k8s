@@ -18,10 +18,8 @@ vagrant file only for debbuging network plugin
   - cgroup_memory=1
   - ip=192.168.0.10
   - ipv6.disable=1
-  - swapaccount=1  # see https://unix.stackexchange.com/questions/531480/what-does-swapaccount-1-in-grub-cmdline-linux-default-do#answer-531489
 - use own certificate authorities:  kubeadm xxxx --cert-dir /etc/kubernetes/pki
   - define /etc/kubernetes/pki/ca.crt and /etc/kubernetes/pki/ca.key
-  
 - install kubernetes dashboard UI
   - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
   - create kubernetes-dashboard-ext.yml file
@@ -67,6 +65,3 @@ vagrant file only for debbuging network plugin
     ```bash
     kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
     ```
-
-
-
