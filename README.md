@@ -27,7 +27,7 @@ vagrant file only for debbuging network plugin
     ```
     kubectl patch svc kubernetes-dashboard -p '{"spec": {"type": "NodePort"} }'
     kubectl patch svc kubernetes-dashboard  --type='json' -p '{"spec": {"type": "NodePort"} }'
-kubectl patch svc kubernetes-dashboard  --type='json' -p '[{"op": "replace", "path": "/spec/type","value":"NodePort"}, {"op": "add", "path": "/spec/ports/-", "value": {"nodePort": 32000}}]'```
+    kubectl patch svc kubernetes-dashboard  --type='json' -p '[{"op": "replace", "path": "/spec/type","value":"NodePort"}, {"op": "add", "path": "/spec/ports/-", "value": {"nodePort": 32000}}]'```
 
   - create admin-user.yaml
   ```yaml
