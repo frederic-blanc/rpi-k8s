@@ -10,6 +10,7 @@ vagrant file only for debbuging network plugin
   - add password to root
   - create new user
   - define .bashrc and .vimrc
+  - disable ipv6, blutooth and wifi
   
 - define cmdline.txt parameters for docker
   - cgroup_enable=cpuset
