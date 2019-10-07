@@ -24,6 +24,7 @@ vagrant file only for debbuging network plugin
   - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
   - kubectl -n kube-system edit service kubernetes-dashboard
     - ClusterIP => NodePort
+    - kubectl patch svc kubernetes-dashboard -p '{"spec": {"type": "NodePort"} }'
   - create admin-user.yaml
   ```yaml
   apiVersion: v1
