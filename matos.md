@@ -1,3 +1,6 @@
+Raspberry PI 4 x4
+* https://www.kubii.fr/les-cartes-raspberry-pi/2677-nouveau-raspberry-pi-4-modele-b-1gb-2gb-4gb-kubii-3272496298750.html
+
 Switch 1GB 5 ports
 * https://www.amazon.fr/gp/product/B0074CDC66/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 
