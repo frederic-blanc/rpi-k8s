@@ -1,0 +1,65 @@
+---
+#- name: Display ansible_fqdn 
+#  debug:
+#    msg: "{{ ansible_fqdn }}"
+#  
+#- name: Display ansible_hostname
+#  debug:
+#    msg: "{{ ansible_hostname }}"
+    
+- name: ensure /tmp/cmdline.txt exist
+  file:
+    path:  /tmp/cmdline.txt
+    state: file
+    owner: root
+    group: root
+    mode:  '0644'
+  become: true
+  
+- name: check cmdline ipv6.disable=1
+  shell: cat /tmp/cmdline.txt | tr -s '[:space:]+ ' '\n' | grep -qq '^ipv6.disable=1$'
+  register: ipv6.disable
+  become: true
+  
+- name: add   cmdline ipv6.disable_1 if needed
+  shell: "{{ item }}"
+  when: ipv6.disable.rc == 1
+  become: true
+  with_items:
+  - cp -f /tmp/cmdline.txt     /tmp/cmdline.txt.tmp
+  - cat   /tmp/cmdline.txt.tmp | tr -s '[:space:]+ ' '\n' |  sed '/^ipv6.disable=.*$/d; $a ipv6.disable=1' | tr -s '\n' ' ' > /tmp/cmdline.txt
+  - rm -f /tmp/cmdline.txt.tmp
+  
+- name: check cmdline cgroup_enable=cpuset
+  shell: cat /tmp/cmdline.txt | tr -s '[:space:]+ ' '\n' | grep -qq '^cgroup_enable=cpuset$'
+  register: cgroup_enable_cpuset
+  become: true
+  
+- name: check cmdline cgroup_enable=memory
+  shell: cat /tmp/cmdline.txt | tr -s '[:space:]+ ' '\n' | grep -qq '^cgroup_enable=memory$'
+  register: cgroup_enable_memory
+  become: true
+  
+- name: add   cmdline ipv6.disable=1 if needed
+  shell: "{{ item }}"
+  when: cgroup_enable_cpuset.rc == 1 or cgroup_enable_memory == 1
+  become: true
+  with_items:
+  - cp -f /tmp/cmdline.txt     /tmp/cmdline.txt.tmp
+  - cat   /tmp/cmdline.txt.tmp | tr -s '[:space:]+ ' '\n' |  sed '/^cgroup_enable=.*$/d; $a cgroup_enable=cpuset cgroup_enable=memory' | tr -s '\n' ' ' > /tmp/cmdline.txt
+  - rm -f /tmp/cmdline.txt.tmp
+  
+- name: check cmdline cgroup_memory=1
+  shell: cat /tmp/cmdline.txt | tr -s '[:space:]+ ' '\n' | grep -qq '^cgroup_memory=1$'
+  register: cgroup_memory_1
+  become: true
+  
+- name: add   cmdline cgroup_memory=1 if needed
+  shell: "{{ item }}"
+  when: cgroup_memory_1.rc == 1
+  become: true
+  with_items:
+  - cp -f /tmp/cmdline.txt     /tmp/cmdline.txt.tmp
+  - cat   /tmp/cmdline.txt.tmp | tr -s '[:space:]+ ' '\n' |  sed '/^cgroup_memory=.*$/d; $a cgroup_memory=1' | tr -s '\n' ' ' > /tmp/cmdline.txt
+  - rm -f /tmp/cmdline.txt.tmp
+  
