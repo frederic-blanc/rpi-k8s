@@ -1,0 +1,33 @@
+---
+- name: ensure {{ cmdline_file }} exist
+  copy:
+    content: ""
+    dest:  {{ cmdline_file }}
+    force: no
+    owner: root
+    group: root
+    mode:  '0644'
+  become: true
+  
+- name: check cmdline ipv6.disable=1
+  shell: tr -s '[:space:]+ ' '\n' < {{ cmdline_file }} | grep -qq '^ipv6.disable=1$'
+  register: ipv6_disable
+  failed_when:  false
+  changed_when: false
+  
+- name: add   cmdline ipv6.disable_1 if needed
+  shell: (cat {{ cmdline_file }} ; echo "") | tr -s '[:space:]+ ' '\n' |  sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > {{ cmdline_file }}
+  when: ipv6_disable.rc == 1
+  become: true
+  
+- name: reboot on cmdline changed_when
+  reboot:
+  when: ipv6_disable.rc == 1
+  
+- name: comment ipv6 hosts lines
+  replace: 
+    path:   /etc/hosts
+    regexp: '^([^#]?.*::[0-9].*)$' 
+    replace: '#\1'
+  become: true
+  
