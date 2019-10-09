@@ -11,27 +11,33 @@
   become: true
 
 - name: check cmdline ipv6.disable=1
-  shell: tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt | grep -qq '^ipv6.disable=1$'
+  shell: (tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt ) | grep -qq '^ipv6.disable=1$'
   register: ipv6_disable
   failed_when:  false
   changed_when: false
   
 - name: add   cmdline ipv6.disable_1 if needed
-  shell: (cat /boot/cmdline.txt ; echo "") | tr -s '[:space:]+ ' '\n' | sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
+  shell: "{{ item }}"
+  args:
+    warn: false
   when: ipv6_disable.rc == 1
+  with_items:
+  - cp -pf /boot/cmdline.txt /tmp/cmdline.txt
+  - (tr -s '[:space:]+ ' '\n' < /tmp/cmdline.txt | sed '/^ipv6.disable=.*$/d;' ; printf "\nipv6.disable=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/cmdline.txt
+  - rm -f /tmp/cmdline.txt
   become: true
   
 - name: comment ipv6 hosts lines
   replace: 
     path:   /etc/hosts
-    regexp: "^([^#]?.*::[0-9].*)$"
-    replace: "#\1"
+    regexp: '^((?!#).*::[0-9].*)$'
+    replace: '#\1'
   become: true
 
 # set hostname and FQDN
 - name: set hostname
   hostname:
-    name: {{ hostname }}
+    name: "{{ hostname }}"
   become: true
 
 - name: remove raspberry from hosts
@@ -42,37 +48,51 @@
   become: true
   
 - name: add hotname and FQDN to hosts
-  lineinfile:
+  blockinfile:
     path: /etc/hosts
-    state: present
-  with_items:
-  - 127.0.1.1       {{ hostname }}
-  - {{ ansible_eth0.ipv4.address }}    {{ hostname }} {{ FQDN }}
+    block: |
+      127.0.1.1       {{ hostname }}
+      {{ ansible_eth0.ipv4.address }}    {{ hostname }} {{ FQDN }}
   become: true
 
 # set static IP
 - name: set static IP
-  lineinfile:
+  blockinfile:
     path: /etc/dhcpcd.conf
-    state: present
-  with_items:
-  - interface eth0
-  - static    ip_address={{ ansible_eth0.ipv4.address }}
-  - static    routers={{ gateway }}
-  - static    domain_name_servers={{ domain_name_servers }}
+    block: |
+      interface eth0
+      static    ip_address={{ ansible_eth0.ipv4.address }}
+      static    routers={{ gateway }}
+      static    domain_name_servers={{ domain_name_servers }}
   register: static_ip
   become: true
   
-- name: check  cmdline ip=xxxxx
-  shell: tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt | grep -qq '^ip={{ ansible_eth0.ipv4.address }}$'
+- name: check  cmdline ip
+  shell: (tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt ) | grep -qq '^ip=.*$'
   register: statis_ip_defined
   failed_when:  false
   changed_when: false
   
-- name: remove cmdline ip=xxxxx if needed
-  shell: (cat /boot/cmdline.txt ; echo "") | tr -s '[:space:]+ ' '\n' | sed '/^ip={{ ansible_eth0.ipv4.address }}$/d;' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
+- name: remove cmdline ip if needed
+  shell: "{{ item }}"
+  args:
+    warn: false
   when: statis_ip_defined.rc == 0
+  with_items:
+  - cp -pf /boot/cmdline.txt /tmp/cmdline.txt
+  - (tr -s '[:space:]+ ' '\n' < /tmp/cmdline.txt | sed '/^ip\=.*$/d;') | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/cmdline.txt
+  - rm -f /tmp/cmdline.txt
   become: true
+  
+- name: debug ip
+  command: cat /boot/cmdline.txt
+  register: debug_ip
+  changed_when: false
+
+  
+- name: debug ip
+  debug:
+    msg: "{{ debug_ip.stdout }}"
   
 # disable wifi and bluetooth
 - name: stop and disable services
@@ -97,16 +117,15 @@
   become: true
   
 - name: add module bt and wifi toe disable list
-  lineinfile:
+  blockinfile:
     path: /boot/config.txt
     insertafter: "[all]"
-    state: present
-  with_items:
-  - dtoverlay=disable-bt
-  - dtoverlay=disable-wifi
+    block: |
+      dtoverlay=disable-bt
+      dtoverlay=disable-wifi
   become: true
   
-#- name: reboot on change
-#  reboot:
-#  when: ipv6_disable.rc == 1 or statis_ip_defined.rc == 0 or static_ip.changed
-#  become: true
+- name: reboot on change
+  reboot:
+  when: ipv6_disable.rc == 1 or statis_ip_defined.rc == 0 or static_ip.changed
+  become: true
