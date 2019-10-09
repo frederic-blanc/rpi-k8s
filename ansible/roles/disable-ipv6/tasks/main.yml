@@ -1,8 +1,8 @@
 ---
-- name: ensure {{ cmdline_file }} exist
+- name: ensure /boot/cmdline.txt exist
   copy:
     content: ""
-    dest:  {{ cmdline_file }}
+    dest:  /boot/cmdline.txt
     force: no
     owner: root
     group: root
@@ -10,20 +10,26 @@
   become: true
   
 - name: check cmdline ipv6.disable=1
-  shell: tr -s '[:space:]+ ' '\n' < {{ cmdline_file }} | grep -qq '^ipv6.disable=1$'
+  shell: tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt | grep -qq '^ipv6.disable=1$'
   register: ipv6_disable
   failed_when:  false
   changed_when: false
   
 - name: add   cmdline ipv6.disable_1 if needed
-  shell: (cat {{ cmdline_file }} ; echo "") | tr -s '[:space:]+ ' '\n' |  sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > {{ cmdline_file }}
+  shell: "{{ item }}"
+  args:
+    warn: no
   when: ipv6_disable.rc == 1
   become: true
+  with_items:
+  - cp -pf  /boot/cmdline.txt   /boot/cmdline.txt.bak
+  - (cat /boot/cmdline.txt.bak ; echo "") | tr -s '[:space:]+ ' '\n' |  sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
   
-- name: reboot on cmdline changed_when
-  reboot:
-  when: ipv6_disable.rc == 1
-  
+#- name: reboot on cmdline change
+#  reboot:
+#  when: ipv6_disable.rc == 1
+#  become: true
+#  
 - name: comment ipv6 hosts lines
   replace: 
     path:   /etc/hosts
@@ -31,3 +37,31 @@
     replace: '#\1'
   become: true
   
+systemctl  stop    hciuart.service
+systemctl  disable hciuart.service
+systemctl  stop    wpa_supplicant.service
+systemctl  disable wpa_supplicant.service
+systemctl  stop    bluetooth.service
+systemctl  disable bluetooth.service
+hostnamectl set-hostname k8s-master.yggdrasil.local
+
+sed -i '/^::1[[:space:]]/d'                                         /etc/hosts
+sed -i '/^ff02::1[[:space:]]/d'                                     /etc/hosts
+sed -i '/^ff02::2[[:space:]]/d'                                     /etc/hosts
+sed -i '/raspberrypi/d'                                             /etc/hosts
+echo "127.0.1.1       k8s-master"                               >>  /etc/hosts
+echo "192.168.1.21    k8s-master k8s-master.yggdrasil.local "   >>  /etc/hosts
+
+echo ''                                             >> /etc/dhcpcd.conf
+echo 'interface eth0'                               >> /etc/dhcpcd.conf
+echo 'static    ip_address=192.168.1.21'            >> /etc/dhcpcd.conf
+echo 'static    routers=192.168.1.1'                >> /etc/dhcpcd.conf
+echo 'static    domain_name_servers=192.168.1.254'  >> /etc/dhcpcd.conf
+
+
+if ! ( grep -qq 'dtoverlay=disable-wifi'    /boot/config.txt); then 
+    echo "dtoverlay=disable-wifi"       >>  /boot/config.txt
+fi
+if ! ( grep -qq 'dtoverlay=disable-bt'      /boot/config.txt); then 
+    echo "dtoverlay=disable-bt"         >>  /boot/config.txt
+fi
