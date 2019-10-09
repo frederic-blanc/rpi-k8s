@@ -3,6 +3,8 @@
 vagrant file only for debbuging network plugin
 
 # to do
+
+
 - roles: prepare os
   - update and upgrade
   - useful tools
@@ -11,7 +13,7 @@ vagrant file only for debbuging network plugin
   - create new user
   - define .bashrc and .vimrc
   - disable ipv6, blutooth and wifi
-  
+  - firmware update https://www.raspberrypi.org/forums/viewtopic.php?f=28&t=243500&p=1490467#p1490467  
 - define cmdline.txt parameters for docker
   - cgroup_enable=cpuset
   - cgroup_enable=memory
