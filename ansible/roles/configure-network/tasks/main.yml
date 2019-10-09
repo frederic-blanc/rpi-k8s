@@ -1,4 +1,5 @@
 ---
+# disable IPV6
 - name: ensure /boot/cmdline.txt exist
   copy:
     content: ""
@@ -8,7 +9,7 @@
     group: root
     mode:  '0644'
   become: true
-  
+
 - name: check cmdline ipv6.disable=1
   shell: tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt | grep -qq '^ipv6.disable=1$'
   register: ipv6_disable
@@ -16,52 +17,96 @@
   changed_when: false
   
 - name: add   cmdline ipv6.disable_1 if needed
-  shell: "{{ item }}"
-  args:
-    warn: no
+  shell: (cat /boot/cmdline.txt ; echo "") | tr -s '[:space:]+ ' '\n' | sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
   when: ipv6_disable.rc == 1
   become: true
-  with_items:
-  - cp -pf  /boot/cmdline.txt   /boot/cmdline.txt.bak
-  - (cat /boot/cmdline.txt.bak ; echo "") | tr -s '[:space:]+ ' '\n' |  sed '/^ipv6.disable=.*$/d;' | sed '$a ipv6.disable=1' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
   
-#- name: reboot on cmdline change
-#  reboot:
-#  when: ipv6_disable.rc == 1
-#  become: true
-#  
 - name: comment ipv6 hosts lines
   replace: 
     path:   /etc/hosts
-    regexp: '^([^#]?.*::[0-9].*)$' 
-    replace: '#\1'
+    regexp: "^([^#]?.*::[0-9].*)$"
+    replace: "#\1"
+  become: true
+
+# set hostname and FQDN
+- name: set hostname
+  hostname:
+    name: {{ hostname }}
+  become: true
+
+- name: remove raspberry from hosts
+  lineinfile:
+    path: /etc/hosts
+    state: absent
+    regexp: raspberrypi
   become: true
   
-systemctl  stop    hciuart.service
-systemctl  disable hciuart.service
-systemctl  stop    wpa_supplicant.service
-systemctl  disable wpa_supplicant.service
-systemctl  stop    bluetooth.service
-systemctl  disable bluetooth.service
-hostnamectl set-hostname k8s-master.yggdrasil.local
+- name: add hotname and FQDN to hosts
+  lineinfile:
+    path: /etc/hosts
+    state: present
+  with_items:
+  - 127.0.1.1       {{ hostname }}
+  - {{ ansible_eth0.ipv4.address }}    {{ hostname }} {{ FQDN }}
+  become: true
 
-sed -i '/^::1[[:space:]]/d'                                         /etc/hosts
-sed -i '/^ff02::1[[:space:]]/d'                                     /etc/hosts
-sed -i '/^ff02::2[[:space:]]/d'                                     /etc/hosts
-sed -i '/raspberrypi/d'                                             /etc/hosts
-echo "127.0.1.1       k8s-master"                               >>  /etc/hosts
-echo "192.168.1.21    k8s-master k8s-master.yggdrasil.local "   >>  /etc/hosts
-
-echo ''                                             >> /etc/dhcpcd.conf
-echo 'interface eth0'                               >> /etc/dhcpcd.conf
-echo 'static    ip_address=192.168.1.21'            >> /etc/dhcpcd.conf
-echo 'static    routers=192.168.1.1'                >> /etc/dhcpcd.conf
-echo 'static    domain_name_servers=192.168.1.254'  >> /etc/dhcpcd.conf
-
-
-if ! ( grep -qq 'dtoverlay=disable-wifi'    /boot/config.txt); then 
-    echo "dtoverlay=disable-wifi"       >>  /boot/config.txt
-fi
-if ! ( grep -qq 'dtoverlay=disable-bt'      /boot/config.txt); then 
-    echo "dtoverlay=disable-bt"         >>  /boot/config.txt
-fi
+# set static IP
+- name: set static IP
+  lineinfile:
+    path: /etc/dhcpcd.conf
+    state: present
+  with_items:
+  - interface eth0
+  - static    ip_address={{ ansible_eth0.ipv4.address }}
+  - static    routers={{ gateway }}
+  - static    domain_name_servers={{ domain_name_servers }}
+  register: static_ip
+  become: true
+  
+- name: check  cmdline ip=xxxxx
+  shell: tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt | grep -qq '^ip={{ ansible_eth0.ipv4.address }}$'
+  register: statis_ip_defined
+  failed_when:  false
+  changed_when: false
+  
+- name: remove cmdline ip=xxxxx if needed
+  shell: (cat /boot/cmdline.txt ; echo "") | tr -s '[:space:]+ ' '\n' | sed '/^ip={{ ansible_eth0.ipv4.address }}$/d;' | sed '/^$/d' | tr -s '\n' ' ' > /boot/cmdline.txt
+  when: statis_ip_defined.rc == 0
+  become: true
+  
+# disable wifi and bluetooth
+- name: stop and disable services
+  systemd:
+    name: cron
+    state: stopped
+    enabled: false
+  with_items:
+  - hciuart
+  - wpa_supplicant
+  - bluetooth
+  become: true
+  
+- name: ensure /boot/config.txt exist
+  copy:
+    content: "[all]"
+    dest:  /boot/config.txt
+    force: no
+    owner: root
+    group: root
+    mode:  '0644'
+  become: true
+  
+- name: add module bt and wifi toe disable list
+  lineinfile:
+    path: /boot/config.txt
+    insertafter: "[all]"
+    state: present
+  with_items:
+  - dtoverlay=disable-bt
+  - dtoverlay=disable-wifi
+  become: true
+  
+#- name: reboot on change
+#  reboot:
+#  when: ipv6_disable.rc == 1 or statis_ip_defined.rc == 0 or static_ip.changed
+#  become: true
