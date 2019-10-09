@@ -12,14 +12,14 @@ vagrant file only for debbuging network plugin
   - add password to root
   - create new user
   - define .bashrc and .vimrc
-  - -disable ipv6, blutooth and wifi-
+  - <s>disable ipv6, blutooth and wifi</s>
   - firmware update https://www.raspberrypi.org/forums/viewtopic.php?f=28&t=243500&p=1490467#p1490467  
 - define cmdline.txt parameters for docker
   - cgroup_enable=cpuset
   - cgroup_enable=memory
   - cgroup_memory=1
-  - -ip=192.168.0.10-
-  - -ipv6.disable=1-
+  - <s>ip=192.168.0.10</s>
+  - <s>ipv6.disable=1</s>
 - use own certificate authorities:  kubeadm xxxx --cert-dir /etc/kubernetes/pki
   - define /etc/kubernetes/pki/ca.crt and /etc/kubernetes/pki/ca.key
 - install kubernetes dashboard UI
