@@ -20,7 +20,7 @@
   shell: "{{ item }}"
   args:
     warn: false
-  when: cmdline_ipv6_disable.rc == 1
+  when: cmdline_ipv6_disable.rc != 0
   with_items:
   - cp -pf /boot/cmdline.txt /tmp/cmdline.txt
   - (tr -s '[:space:]+ ' '\n' < /tmp/cmdline.txt | sed '/^ipv6.disable=.*$/d;' ; printf "\nipv6.disable=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/cmdline.txt
@@ -119,6 +119,6 @@
 # reboot if needed
 - name: reboot on change
   reboot:
-  when: cmdline_ipv6_disable.rc == 1 or cmdline_ip.rc == 0 or dhcpcd_static_ip.changed or config_wifi_bt.changed
+  when: cmdline_ipv6_disable.rc != 0 or cmdline_ip.rc == 0 or dhcpcd_static_ip.changed or config_wifi_bt.changed
   become: true
   
