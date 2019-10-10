@@ -13,7 +13,7 @@
     group: root
     mode: '0600'
     block: |
-      export PS1='{{ prompt.root }}'
+      export PS1='{{ prompts.root }}'
       
       alias ls='ls $LS_OPTIONS'
       alias ll='ls $LS_OPTIONS -l'
@@ -55,7 +55,7 @@
     group: "{{ item }}"
     mode: '0600'
     block: |
-      export PS1='{{ prompt.user }}'
+      export PS1='{{ prompts.user }}'
       
       alias ls='ls $LS_OPTIONS'
       alias ll='ls $LS_OPTIONS -l'
