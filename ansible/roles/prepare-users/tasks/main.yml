@@ -3,7 +3,6 @@
   user:
     name: root
     shell: /bin/bash
-    password: "{{ root.password | password_hash('sha512', root.salt) }}"
   become: true
   
 - name: set root bash prompt and ls aliases
