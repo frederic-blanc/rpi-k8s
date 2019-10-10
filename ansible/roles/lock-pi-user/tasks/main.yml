@@ -1,0 +1,4 @@
+---
+#check if work_users is empty
+# and if at least one password is set 
+# root does not could as ssh to root is disable

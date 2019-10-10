@@ -33,14 +33,14 @@
   
 - name: set root password
   user:
-    name: root
-    password: "{{ root.password | password_hash('sha512', root.salt) }}"
-  when: root is defined
+    name: "root"
+    password: "{{ root_password | password_hash('sha512', password_salt | default('')) }}"
+  when: root_password is defined
   become: true
   
 - name: create work_users
   user:
-    name: "{{ item.name }}"
+    name: "{{ item }}"
     shell: /bin/bash
     groups: sudo
     append: yes
@@ -49,10 +49,10 @@
   
 - name: set work_users bash prompt and ls aliases
   blockinfile:
-    path: "/home/{{ item.name }}/.bashrc"
+    path: "/home/{{ item }}/.bashrc"
     create: yes
-    owner: "{{ item.name }}"
-    group: "{{ item.name }}"
+    owner: "{{ item }}"
+    group: "{{ item }}"
     mode: '0600'
     block: |
       export PS1='{{ prompt.user }}'
@@ -65,10 +65,10 @@
   
 - name: set work_users vimrc config
   blockinfile:
-    path: "/home/{{ item.name }}/.vimrc"
+    path: "/home/{{ item }}/.vimrc"
     create: yes
-    owner: "{{ item.name }}"
-    group: "{{ item.name }}"
+    owner: "{{ item }}"
+    group: "{{ item }}"
     mode: '0600'
     block: |
       set mouse-=a
@@ -77,10 +77,9 @@
     
 - name: set work_users password
   user:
-    name: "{{ item.name }}"
-    password: "{{ item.password | password_hash('sha512', item.salt) }}"
-    groups: sudo
-    append: yes
+    name: "{{ item }}"
+    password: "{{ user_passwords[item] | password_hash('sha512', password_salt | default('')) }}"
+  when: user_passwords is defined and user_passwords[item] is defined
   with_items: "{{ work_users }}"
   become: true
   
