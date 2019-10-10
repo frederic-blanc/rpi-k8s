@@ -6,7 +6,7 @@ fqdn: "{{ hostname }}.{{ domain_name }}"
 
 timezone: "Europe/Paris"
 
-firmware_update:
+firmware:
   archive: 'vl805_update_0137ab.zip'
   binary:  'vl805_fw_0137ab.bin'
 
