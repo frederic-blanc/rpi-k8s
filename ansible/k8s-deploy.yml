@@ -2,15 +2,6 @@
 - name: install k8s dependencies to all nodes
   hosts: all
   roles:
-    - k8s-dependencies
-  
-- name: create master node
-  hosts: master
-  roles:
-    - k8s-create-master
-  
-- name: create worker nodes
-  hosts: worker
-  roles:
-    - k8s-create-worker
-  
+    - prepare-network
+    - prepare-system
+

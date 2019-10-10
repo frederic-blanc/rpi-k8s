@@ -4,12 +4,13 @@
     upgrade: dist
     update_cache: yes
     autoremove:   yes
+    force_apt_get: yes
   become: true
   
 - name: add useful tooling
   apt:
-    name: "{{ item }}"
-  with_items: "{{ useful_tools }}"
+    name: "{{ useful_tools }}"
+    force_apt_get: yes
   become: true
   
 - name: unarchive firmware files
@@ -17,20 +18,18 @@
     src: "{{ firmware.archive }}"
     dest: /tmp
     mode: '0500'
-    extra_opts:
-    - vl805
-    - "{{ firmware.binary }}"
+    exclude: "{{ firmware.old_bin }}"
   changed_when: false
   become: true
   
 - name: Check firmware version
-  shell: /tmp/vl805 -c /tmp/vl805_fw_0137ab.bin
+  shell: "/tmp/vl805 -v /tmp/{{ firmware.new_bin }}"
   register: firmware_check
   changed_when: false
   become: true
   
 - name: Update firmware if needed
-  shell: /tmp/vl805 -w /tmp/vl805_fw_0137ab.bin
+  shell: "/tmp/vl805 -w /tmp/{{ firmware.new_bin }}"
   when: firmware_check.rc != 0
   become: true
   
@@ -40,13 +39,14 @@
     state: absent
   with_items:
   - vl805
-  - "{{ firmware.binary }}"
+  - "{{ firmware.new_bin }}"
   changed_when: false
   become: true
   
 - name: Set timezone
   timezone:
     name: "{{ timezone }}"
+  become: true
   
 # reboot if needed
 - name: reboot on change
