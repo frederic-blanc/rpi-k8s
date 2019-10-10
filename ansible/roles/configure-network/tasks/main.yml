@@ -47,12 +47,12 @@
     regexp: raspberrypi
   become: true
   
-- name: add hotname and FQDN to hosts
+- name: add hotname and fqdn to /etc/hosts
   blockinfile:
     path: /etc/hosts
     block: |
-      127.0.1.1       {{ FQDN }} {{ hostname }}
-      {{ ansible_eth0.ipv4.address }}    {{ FQDN }} {{ hostname }}
+      127.0.1.1       {{ fqdn }} {{ hostname }}
+      {{ ansible_eth0.ipv4.address }}    {{ fqdn }} {{ hostname }}
   become: true
   
 # set static IP
