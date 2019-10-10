@@ -6,5 +6,39 @@
     autoremove:   yes
   become: true
   
+#apt-get install vim htop tree dnsutils -y
+#  
+#apt-get update
+#apt-get upgrade -y
+#
+#apt-get install vim htop tree dnsutils -y
+#
+#apt-get autoremove  -y
+#
+#timedatectl set-timezone 'Europe/Paris'
+#
+#echo ''             >> .bashrc
+#echo 'export PS1="\[\033[38;5;1m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;27m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]"' >> ~/.bashrc
+#
+#sed -i 's/# alias ls=/alias ls=/'   ~/.bashrc
+#sed -i 's/# alias ll=/alias ll=/'   ~/.bashrc
+#sed -i 's/# alias l=/alias  l=/'    ~/.bashrc
+#
+#
+#echo 'set mouse-=a' > ~/.vimrc
+#
+#echo ''                             >>  /home/pi/.bashrc
+#echo 'alias ls="ls $LS_OPTIONS"'    >>  /home/pi/.bashrc
+#echo 'alias ll="ls $LS_OPTIONS -l"' >>  /home/pi/.bashrc
+#echo 'alias  l="ls $LS_OPTIONS -lA"'>>  /home/pi/.bashrc
+#echo ''                             >>  /home/pi/.bashrc
+#echo 'PS1="\[\033[38;5;22m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;3m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]"'                           >>  /home/pi/.bashrc
+#echo 'set mouse-=a' > /home/pi/.vimrc
+#chown pi:pi           /home/fanarie/.vimrc
+#
+#passwd -l pi
+#
+#( cd /tmp ; unzip -o /home/pi/vl805_update_0137ab.zip   )
+#( cd /tmp ; chmod +x vl805                              )
+#( cd /tmp ; ./vl805 -w vl805_fw_0137ab.bin              )
 
-  
