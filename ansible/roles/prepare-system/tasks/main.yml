@@ -5,7 +5,7 @@
     update_cache: yes
     autoremove:   yes
   become: true
- 
+  
 - name: add useful tooling
   apt:
     name: "{{ item }}"
@@ -22,7 +22,7 @@
     - "{{ firmware.binary }}"
   changed_when: false
   become: true
-
+  
 - name: Check firmware version
   shell: /tmp/vl805 -c /tmp/vl805_fw_0137ab.bin
   register: firmware_check
@@ -33,7 +33,7 @@
   shell: /tmp/vl805 -w /tmp/vl805_fw_0137ab.bin
   when: firmware_check.rc != 0
   become: true
-
+  
 - name: remove firmware files
   file: 
     path: "{{ item }}"
@@ -43,5 +43,13 @@
   - "{{ firmware.binary }}"
   changed_when: false
   become: true
-
-#timedatectl set-timezone 'Europe/Paris'
+  
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+  
+# reboot if needed
+- name: reboot on change
+  reboot:
+  when: firmware_check.rc != 0
+  become: true
