@@ -4,6 +4,8 @@ gateway: "192.168.1.1"
 domain_name_servers: "192.168.1.254"
 fqdn: "{{ hostname }}.{{ domain_name }}"
 
+timezone: "Europe/Paris"
+
 work_users:
 - name: "fanarie"
   password: "mypassword"
