@@ -12,6 +12,6 @@
   user:
     name: "pi"
     password_lock: yes
-  when: keep_enable|default(false) is defined and
+  when: keep_enable|default(false) is defined
   become: true
   
