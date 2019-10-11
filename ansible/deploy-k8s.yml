@@ -1,8 +1,15 @@
 ---
-- name: install k8s dependencies to all nodes
+- name: prepare node
   hosts: all
   roles:
-    - prepare-network
-    - prepare-system
-    - prepare-users
+  - prepare-network
+  - prepare-system
+  - prepare-users
+  - install-docker
+  - install-k8s
+  
+- name: lock pi account
+  hosts: all
+  roles:
+  - lock-pi-user
   

@@ -2,3 +2,16 @@
 #check if work_users is empty
 # and if at least one password is set 
 # root does not could as ssh to root is disable
+- name: 
+  set_fact:
+    keep_enable: true
+  when: item == 'pi' or user_passwords is defined and user_passwords[item] is defined
+  with_items: "{{ work_users }}"
+  
+- name: disable pi account password
+  user:
+    name: "pi"
+    password_lock: yes
+  when: keep_enable|default(false) is defined and
+  become: true
+  

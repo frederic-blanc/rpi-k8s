@@ -1,5 +1,4 @@
 ---
 k8s:
-  plugin: "weave"
-  users:
-  - pi
+  network_plugin: "weave"
+  

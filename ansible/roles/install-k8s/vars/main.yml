@@ -1,0 +1,8 @@
+---
+k8s:
+  repository:
+    deb_arch: armhf
+    dist:     raspbian
+    version:  kubernetes-xenial
+    channel:  main
+  
