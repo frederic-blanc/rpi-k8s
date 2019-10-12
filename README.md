@@ -2,12 +2,9 @@
 
 vagrant file provided for debbuging network plugin on debian
 
-# to do
-- use own certificate authorities:  kubeadm xxxx --cert-dir /etc/kubernetes/pki
-  - define /etc/kubernetes/pki/ca.crt and /etc/kubernetes/pki/ca.key
-  
-- issue with weave v2.5.2 (see https://github.com/weaveworks/weave/issues/3717)
-  flannel is fine
+# to do  
+- issue with weave v2.5.2 (see https://github.com/weaveworks/weave/issues/3717),
+  flannel just works fine
   
 - install kubernetes dashboard UI
   - kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
