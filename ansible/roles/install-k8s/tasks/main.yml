@@ -69,7 +69,7 @@
     - socat
   become: true
   
-- name: use __tables-legacy
+- name: use __tables-legacy (needed for the network plugin to work on debian:buster)
   alternatives:
     name: "{{ item }}"
     path: "/usr/sbin/{{ item }}-legacy"
@@ -80,7 +80,7 @@
   register: __tables_legacy
   become: true
   
-- name: set net.bridge.bridge-nf-call-iptables to 1
+- name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
   sysctl:
     name:  net.bridge.bridge-nf-call-iptables
     value: "1"
