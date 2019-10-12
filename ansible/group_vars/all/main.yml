@@ -44,5 +44,5 @@ prompts:
   root: '\[\033[38;5;1m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;27m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
   
 k8s:
-  network_plugin: "weave"
+  network_plugin: "flannel" # until weave issue on armhf is resolve
   
