@@ -4,14 +4,14 @@
 # root does not could as ssh to root is disable
 - name: 
   set_fact:
-    keep_enable: true
-  when: item == 'pi' or user_passwords is defined and user_passwords[item] is defined
+    keep_enable: false
+  when: item != 'pi' and user_passwords is defined and user_passwords[item] is defined
   with_items: "{{ work_users }}"
   
 - name: disable pi account password
   user:
     name: "pi"
     password_lock: yes
-  when: keep_enable|default(false) is defined
+  when: keep_enable|default(true) is defined
   become: true
   
