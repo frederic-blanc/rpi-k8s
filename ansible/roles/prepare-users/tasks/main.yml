@@ -21,14 +21,13 @@
   become: true
   
 - name: set root vimrc config
-  blockinfile:
+  lineinfile:
     path: /root/.vimrc
     create: yes
     owner: root
     group: root
     mode: '0600'
-    block: |
-      set mouse-=a
+    line: set mouse-=a
   become: true
   
 - name: set root password
@@ -64,14 +63,13 @@
   become: true
   
 - name: set work_users vimrc config
-  blockinfile:
+  lineinfile:
     path: "/home/{{ item }}/.vimrc"
     create: yes
     owner: "{{ item }}"
     group: "{{ item }}"
     mode: '0600'
-    block: |
-      set mouse-=a
+    line: set mouse-=a
   with_items: "{{ work_users }}"
   become: true
     

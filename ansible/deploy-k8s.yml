@@ -8,15 +8,15 @@
   - install-docker
   - install-k8s
   
-- name: create k8s master
-  hosts: master
-  roles:
-  - create-k8s-master
-  
-- name: create k8s worker
-  hosts: worker
-  roles:
-  - create-k8s-worker
+#- name: create k8s master
+#  hosts: master
+#  roles:
+#  - create-k8s-master
+#  
+#- name: create k8s worker
+#  hosts: worker
+#  roles:
+#  - create-k8s-worker
   
 - name: lock pi account
   hosts: all

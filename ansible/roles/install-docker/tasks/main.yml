@@ -101,6 +101,9 @@
   file: 
     path:  /etc/docker
     state: directory
+    owner: root
+    group: root
+    mode:  '0755'
   become: true
   
 - name: Copy docker daemon.json on server to /etc/docker
@@ -124,17 +127,11 @@
   become: true
   
 # add docker group to work_users
-- name: Determine available users
-  getent:
-    database: passwd
-  register:   users
-  
 - name: add docker group to work_users
   user:
     name: '{{ item }}'
     groups: docker
     append: yes
-  when: item in users
   with_items: "{{ work_users }}"
   become: true
   
