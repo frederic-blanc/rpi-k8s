@@ -18,13 +18,13 @@ useful_tools:
 - dnsutils
 
 work_users:
-- fanarie
+- frederic
 # password should be define in a vault as follow
 # and you can generate a salt with the following command:
 # cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 # ---
 # passwords:
-# - fanarie: 'my_password'
+# - frederic: 'my_password'
 #
 # root_password: 'my_root_password'
 #
