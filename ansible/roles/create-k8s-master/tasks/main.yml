@@ -1,19 +1,19 @@
 ---
 - name: Generate local private key (2048 bits, RSA)
   openssl_privatekey:
-    path: files/ca.key
+    path: "files/{{ domain_name }}.key"
     type: RSA
     size: 2048
   delegate_to: localhost
   
 - name: Generate local csr
   openssl_csr:
-    path: files/ca.csr
+    path: "files/{{ domain_name }}.csr"
     privatekey_path: files/ca.key
-    common_name: 'Yggdrasil Certificate Authority'
-    state_or_province_name: 'MIDGARD'
-    organization_name: 'YGGDRASIL'
-    organizational_unit_name: "YGGDRASIL.LOCAL"
+    common_name: "{{ certificate_authority.CN }}"
+    state_or_province_name: "{{ certificate_authority.ST }}"
+    organization_name: "{{ certificate_authority.O }}"
+    organizational_unit_name: "{{ certificate_authority.OU }}"
     useCommonNameForSAN: false
     basicConstraints:
     - CA:TRUE
@@ -21,7 +21,7 @@
   
 - name: Generate local Self Signed Certificate Authority
   openssl_certificate:
-    path: files/ca.crt
+    path: "files/{{ domain_name }}.crt"
     csr_path: files/ca.csr
     privatekey_path: files/ca.key
     provider: selfsigned
@@ -39,7 +39,7 @@
   
 - name: Copy key to /etc/kubernetes/pki
   copy: 
-    src:  files/ca.key
+    src:  "files/{{ domain_name }}.key"
     dest: /etc/kubernetes/pki/ca.key
     owner: root
     group: root
@@ -48,14 +48,13 @@
   
 - name: Copy certificate to /etc/kubernetes/pki
   copy: 
-    src:  files/ca.crt
+    src:  "files/{{ domain_name }}.crt"
     dest: /etc/kubernetes/pki/ca.crt
     owner: root
     group: root
     mode: '0444'
   become: true
   
-  #kubeadm config images pull
   
 #- name: Set default value for plugin
 #  set_fact:  
@@ -71,7 +70,7 @@
 #  become: true
 #  
 #- name: Initialize the Kubernetes cluster using kubeadm
-#  command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" {{ pod_network_cidr_arg }} --cert-dir
+#  command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --cert-dir /etc/kubernetes/pki {{ pod_network_cidr_arg }}
 #  become: true
 #  
 #- name: Ensures .kube dir exists for root
