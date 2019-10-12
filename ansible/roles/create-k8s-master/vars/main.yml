@@ -1,4 +1,0 @@
----
-k8s:
-  network_plugin: "weave"
-  
