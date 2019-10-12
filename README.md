@@ -1,6 +1,6 @@
 # rpi-k8S
 
-vagrant file only for debbuging network plugin
+vagrant file provided for debbuging network plugin on debian
 
 # to do
 - use own certificate authorities:  kubeadm xxxx --cert-dir /etc/kubernetes/pki
