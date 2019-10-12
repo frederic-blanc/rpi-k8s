@@ -55,86 +55,86 @@
     mode: '0444'
   become: true
   
+# from here the role is not idempotent
+- name: Reset the Kubernetes cluster using kubeadm
+  command: kubeadm reset -f
+  become: true
   
-#- name: Set default value for plugin
-#  set_fact:  
-#    k8s.plugin: "weave"
-#  when: k8s.plugin is not defined or k8s.plugin|length < 1
-#  
-#- name: set pod-network-cidr arg
-#  set_fact:
-#    pod_network_cidr_arg: "{% if k8s.plugin=='flannel'%}--pod-network-cidr=\"10.244.0.0/16\"{% endif %}"
-#  
-#- name: Reset the Kubernetes cluster using kubeadm
-#  command: kubeadm reset -f
-#  become: true
-#  
-#- name: Initialize the Kubernetes cluster using kubeadm
-#  command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --cert-dir /etc/kubernetes/pki {{ pod_network_cidr_arg }}
-#  become: true
-#  
-#- name: Ensures .kube dir exists for root
-#  file: 
-#    path:  /root/.kube
-#    state: directory
-#    owner: root
-#    group: root
-#    mode:  '0700'
-#  become: true
-#  
-#- name: copy kube config to root
-#  copy:
-#    src:  /etc/kubernetes/admin.conf
-#    dest: /root/.kube/config
-#    owner: root
-#    group: root
-#    mode:  0400
-#    remote_src: yes
-#  become: true
-#  
-#- name: Ensures .kube dir exists for users
-#  file: 
-#    path:  "/home/{{ item }}/.kube"
-#    state: directory
-#    owner: "{{ item }}"
-#    group: "{{ item }}"
-#    mode:  '0700'
-#  with_items: "{{ work_users }}"
-#  become: true
-#  
-#- name: copy kube config to users
-#  copy:
-#    src:   /etc/kubernetes/admin.conf
-#    dest:  "/home/{{ item }}/.kube/config"
-#    owner: "{{ item }}"
-#    group: "{{ item }}"
-#    mode:  0400
-#    remote_src: yes
-#  with_items: "{{ k8s.users }}"
-#  become: true
-#  
-#- name: Install flannel pod network
-#  command: kubectl create -f "https://raw.githubusercontent.com/coreos/flannel/2140ac876ef134e0ed5af15c65e414cf26827915/Documentation/kube-flannel.yml"
-#  when:    k8s.plugin == "flannel"
-#  become: true
-#  
-#- name: get kubectl version
-#  shell:  kubectl version | base64 | tr -d '\n'
-#  when:     k8s.plugin == "weave"
-#  register: kubectl_version
-#  become:  true
-#  changed_when: False
-#  
-#- name: Install weave pod network
-#  command: kubectl create -f "https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout }}&env.WEAVE_MTU=8912"
-#  when:    k8s.plugin == "weave"
-#  become: true
-#  
-#- name: Generate join command
-#  command:  kubeadm token create --print-join-command
-#  register: join_command
-#  become: true
-#  
-#- name: Copy join command to local file
-#  local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
-#  
+- block: kubernetes with flannel network plugin installation
+    
+  - name: Initialize the Kubernetes cluster using kubeadm
+    command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --hostname-override "{{ fqdn }}" --cert-dir /etc/kubernetes/pki --pod-network-cidr="10.244.0.0/16"
+    become: true
+    
+  - name: Install flannel pod network
+    command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml" --kubeconfig /etc/kubernetes/admin.conf
+    become: true
+    
+when: k8s.plugin == 'flannel'
+
+- block: kubernetes with weave network plugin installation
+    
+  - name: get kubectl version
+    shell:  kubectl version | base64 | tr -d '\n'
+    register: kubectl_version
+    become:  true
+    changed_when: False
+    
+  - name: Initialize the Kubernetes cluster using kubeadm
+    command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --hostname-override "{{ fqdn }}" --cert-dir /etc/kubernetes/pki
+    become: true
+    
+  - name: Install weave pod network
+    command: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout }}&env.WEAVE_MTU=8912" --kubeconfig /etc/kubernetes/admin.conf
+    become: true
+    
+when: k8s.plugin == 'weave'
+
+- name: Ensures .kube dir exists for root
+  file: 
+    path:  /root/.kube
+    state: directory
+    owner: root
+    group: root
+    mode:  '0700'
+  become: true
+  
+- name: copy kube config to root
+  copy:
+    src:  /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    owner: root
+    group: root
+    mode:  '0400'
+    remote_src: yes
+  become: true
+  
+- name: Ensures .kube dir exists for users
+  file: 
+    path:  "/home/{{ item }}/.kube"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode:  '0700'
+  with_items: "{{ work_users }}"
+  become: true
+  
+- name: copy kube config to users
+  copy:
+    src:   /etc/kubernetes/admin.conf
+    dest:  "/home/{{ item }}/.kube/config"
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode:  '0400'
+    remote_src: yes
+  with_items: "{{ k8s.users }}"
+  become: true
+  
+- name: Generate join command
+  command:  kubeadm token create --print-join-command
+  register: join_command
+  become: true
+  
+- name: Copy join command to local file
+  local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
+  
