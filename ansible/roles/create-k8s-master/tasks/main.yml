@@ -63,7 +63,7 @@
 - block: kubernetes with flannel network plugin installation
     
   - name: Initialize the Kubernetes cluster using kubeadm
-    command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --hostname-override "{{ fqdn }}" --cert-dir /etc/kubernetes/pki --pod-network-cidr="10.244.0.0/16"
+    command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --cert-dir /etc/kubernetes/pki --pod-network-cidr="10.244.0.0/16"
     become: true
     
   - name: Install flannel pod network
