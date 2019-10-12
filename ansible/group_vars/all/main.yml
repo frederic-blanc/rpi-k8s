@@ -26,9 +26,8 @@ useful_tools:
 
 work_users:
 - frederic
-# password should be define in a vault as follow
-# and you can generate a salt with the following command:
-# cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
+# password should be define in a vault or a plein text file as follow
+#####################################
 # ---
 # passwords:
 # - frederic: 'my_password'
@@ -36,6 +35,9 @@ work_users:
 # root_password: 'my_root_password'
 #
 # password_salt: 'my_password_salt'
+#####################################
+## You can generate a salt with the following command:
+# cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 
 prompts:
   user: '\[\033[38;5;22m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;3m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
