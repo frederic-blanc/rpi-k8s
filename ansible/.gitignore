@@ -1,3 +1,9 @@
 passwords.yml
 passwords-vault.yml
-ca.*
+vault.yml
+*.key
+*.crt
+*.csr
+local-*.sh
+admin-token.txt
+
