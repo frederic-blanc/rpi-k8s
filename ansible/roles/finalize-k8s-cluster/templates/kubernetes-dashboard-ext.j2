@@ -10,7 +10,7 @@ spec:
   ports:
     - port: 443
       targetPort: 8443
-      nodePort: {{ k8s.dashboard-ui.port }}
+      nodePort: {{ k8s.dashboard_ui.port }}
   type: NodePort
   selector:
     k8s-app: kubernetes-dashboard

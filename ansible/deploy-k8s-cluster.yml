@@ -1,0 +1,16 @@
+---
+#- name: create k8s master
+#  hosts: master
+#  roles:
+#  - create-k8s-master
+#
+#- name: create k8s worker
+#  hosts: worker
+#  roles:
+#  - create-k8s-worker
+  
+- name: finalyze k8s cluster
+  hosts: master
+  roles:
+  - finalize-k8s-cluster
+  

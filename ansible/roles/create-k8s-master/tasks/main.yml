@@ -42,6 +42,18 @@
   shell:  kubeadm reset -f
   become: true
   
+- name: check if flannel interface exist
+  shell: ifconfig | grep 'flannel.1:'
+  register: flannel_interface
+  changed_when: false
+  failed_when: false
+  become: true
+  
+- name: remove old flannel.1 interface
+  shell: ifconfig 'flannel.1' down
+  when: flannel_interface.rc == 0
+  become: true
+  
 - name: Copy key to /etc/kubernetes/pki
   copy: 
     src:  "files/{{ domain_name }}.key"

@@ -10,14 +10,14 @@
   command: sh /tmp/label-node-k8s-cluster.sh
   become: true
   
-- name: Copy the label node command to server location
+- name: remove the label node command to server location
   file: 
     path: /tmp/label-node-k8s-cluster.sh
     state: absent
   become: true
   
 - name: Install dashboard-ui
-    shell: kubectl apply -f 'https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml'
+  shell: kubectl apply -f "https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml"
   become: true
   
 - name: copy dashboard-ui patch file
@@ -30,7 +30,7 @@
   become: true
   
 - name: patch dashboard-ui service to be accessed from remote
-    shell: kubectl apply -f '/root/kubernetes-dashboard-ext.yml'
+  shell: kubectl apply -f '/root/kubernetes-dashboard-ext.yml'
   become: true
   
 - name: delete dashboard-ui patch file
@@ -40,12 +40,12 @@
   become: true
   
 - name: generate dashboard-ui admin token
-    shell: kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+  shell: kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
   register: admin_token
   
 - name: Copy admin token to local file
   copy:
-    content: "{{ admin_token.stdout_lines[0] }}" 
+    content: "{{ admin_token.stdout }}" 
     dest: "admin-token.txt"
   delegate_to: localhost
   
