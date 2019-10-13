@@ -45,4 +45,6 @@ prompts:
   
 k8s:
   network_plugin: "flannel" # until weave issue on armhf is resolve
+  dashboard-ui:
+    port: 32000
   

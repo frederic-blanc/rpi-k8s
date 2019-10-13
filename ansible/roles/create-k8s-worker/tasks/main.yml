@@ -1,16 +1,28 @@
 ---
-- name: Copy the join command to server location
-  copy: 
-    src:  join-command
-    dest: /tmp/join-command.sh
-    mode: 0700
-  become: true
-  
 - name: Reset the Kubernetes cluster using kubeadm
   command: kubeadm reset -f
   become: true
   
-- name: Join the node to cluster
-  command: sh /tmp/join-command.sh
+- name: Copy the join command to server location
+  copy: 
+    src:  files/local-join-k8s-cluster.sh
+    dest: /tmp/join-k8s-cluster.sh
+    mode: 0700
   become: true
+  
+- name: attach the node to cluster
+  command: sh /tmp/join-k8s-cluster.sh
+  become: true
+  
+- name: delete join command file
+  file: 
+    path: /tmp/join-k8s-cluster.sh
+    state: absent
+  become: true
+  
+- name: Copy label node command to local file
+  lineinfile:
+    line: "kubectl label node {{ hostname }} node-role.kubernetes.io/worker=worker"
+    path: files/local-label-node-k8s-cluster.sh
+  delegate_to: localhost
   
