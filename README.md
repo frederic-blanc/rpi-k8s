@@ -16,7 +16,9 @@ vagrant file provided for debbuging network plugin on debian
 - fallback to nginx-ingress-controller
   - image exists for ARM arch (https://quay.io/repository/kubernetes-ingress-controller/nginx-ingress-controller-arm), 
     just need to update the deployment file (https://github.com/kubernetes/ingress-nginx/blob/master/deploy/static/mandatory.yaml)
-
+  - https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/
+  - https://github.com/kubernetes/ingress-nginx/issues/3762
+  - https://kubernetes.github.io/ingress-nginx/examples/rewrite/#rewrite-target
   ```yaml
   ---
   apiVersion: apps/v1
@@ -94,5 +96,11 @@ vagrant file provided for debbuging network plugin on debian
   - https://www.jamescoyle.net/how-to/2105-small-scale-ceph-replicated-storage
   - https://bryanapperson.com/blog/the-definitive-guide-ceph-cluster-on-raspberry-pi/
   - http://howtolamp.com/projects/ceph.pdf
-
+  - https://docs.ceph.com/docs/master/install/manual-deployment/#monitor-bootstrapping
   
+
+
+
+ 
+
+
