@@ -92,6 +92,7 @@ vagrant file provided for debbuging network plugin on debian
 
 - install ceph to serve distributed FS
   - https://www.jamescoyle.net/how-to/2105-small-scale-ceph-replicated-storage
+  - https://bryanapperson.com/blog/the-definitive-guide-ceph-cluster-on-raspberry-pi/
   - http://howtolamp.com/projects/ceph.pdf
 
   
