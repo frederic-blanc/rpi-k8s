@@ -1,7 +1,14 @@
 ---
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:  files/generated
+      state: directory
+  become: true
+  delegate_to: localhost
+  
 - name: Copy the label node command to server location
   copy: 
-    src:  files/local-label-node-k8s-cluster.sh
+    src:  files/generated/local-label-node-k8s-cluster.sh
     dest: /tmp/label-node-k8s-cluster.sh
     mode: 0700
   become: true
@@ -16,32 +23,156 @@
     state: absent
   become: true
   
-- name: Install dashboard-ui
-  shell: kubectl apply -f "https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml"
+- name: Ensures /root/k8s dir exists on controller
+  file: 
+      path:  /root/k8s
+      state: directory
+      owner: root
+      group: root
+      mode:  '0755'
   become: true
   
-- name: copy dashboard-ui patch file
-  template:
-    src:   kubernetes-dashboard-ext.j2
-    dest:  /root/kubernetes-dashboard-ext.yml
+#############################
+##      Ingress NGINX      ##
+#############################
+- name: Generate local private key for ingress (2048 bits, RSA)
+  openssl_privatekey:
+    path: "files/generated/{{ ingress_certificate.CN }}.key"
+    type: RSA
+    size: 2048
+  delegate_to: localhost
+  
+- name: Generate local csr for ingress
+  openssl_csr:
+    path: "files/generated/{{ ingress_certificate.CN }}.csr"
+    privatekey_path: files/generated/{{ ingress_certificate.CN }}.key
+    common_name: "{{ ingress_certificate.CN }}"
+    state_or_province_name: "{{ ingress_certificate.ST }}"
+    organization_name: "{{ ingress_certificate.O }}"
+    organizational_unit_name: "{{ ingress_certificate.OU }}"
+    useCommonNameForSAN: false
+    basicConstraints:
+    - CA:FALSE
+    extended_key_usage:
+    - serverAuth
+    subject_alt_name: "{{ ingress_certificate.SAN }}"
+  delegate_to: localhost
+  
+- name: Generate local certificate signed with own CA for ingress
+  openssl_certificate:
+    path: "files/generated/{{ ingress_certificate.CN }}.crt"
+    csr_path: "files/generated/{{ ingress_certificate.CN }}.csr"
+    ownca_path: "files/generated/{{ domain_name }}.crt"
+    ownca_privatekey_path: "files/generated/{{ domain_name }}.key"
+    provider: ownca
+  delegate_to: localhost
+  
+- name: get base64 of local key
+  shell: "cat files/generated/{{ ingress_certificate.CN }}.key | base64 -w0"
+  register: base64_key
+  delegate_to: localhost
+  changed_when: false
+  
+- name: set ingress_certificate_base64_key var
+  set_fact: ingress_certificate_base64_key="{{ base64_key.stdout }}"
+  
+- name: get base64 of local certificate
+  shell: "cat files/generated/{{ ingress_certificate.CN }}.crt files/generated/{{ domain_name }}.crt | base64 -w0"
+  register: base64_crt
+  delegate_to: localhost
+  changed_when: false
+  
+- name: set ingress_certificate_base64_crt var
+  set_fact: ingress_certificate_base64_crt="{{ base64_crt.stdout }}"
+  
+- name: download latest ingress-nginx version
+  get_url:
+    url:  https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
+    dest: files/generated/k8s-ingress-nginx.yaml
+    force: true
+  delegate_to: localhost
+  
+- name: update ingress-nginx container image to arm version
+  replace:
+    path: files/generated/k8s-ingress-nginx.yaml
+    regexp:  'quay.io/kubernetes-ingress-controller/nginx-ingress-controller:'
+    replace: 'quay.io/kubernetes-ingress-controller/nginx-ingress-controller-arm:'
+  delegate_to: localhost
+  
+- name: update ingress-nginx (add certificate secret arg)
+  lineinfile:
+    path: files/generated/k8s-ingress-nginx.yaml
+    insertafter: '^            - /nginx-ingress-controller'
+    line: '            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate'
+  delegate_to: localhost
+  
+- name: copy ingress-nginx file on host
+  copy:
+    src:   files/generated/k8s-ingress-nginx.yaml
+    dest:  /root/k8s/k8s-ingress-nginx.yaml
     owner: root
     group: root
     mode: '0644'
   become: true
   
-- name: patch dashboard-ui service to be accessed from remote
-  shell: kubectl apply -f '/root/kubernetes-dashboard-ext.yml'
+- name: copy ingress-nginx ext file (service) on host
+  template:
+    src:   k8s-ingress-nginx-ext.j2
+    dest:  /root/k8s/k8s-ingress-nginx-ext.yaml
+    owner: root
+    group: root
+    mode: '0644'
   become: true
   
-- name: delete dashboard-ui patch file
-  file: 
-    path: /root/kubernetes-dashboard-ext.yml
-    state: absent
+- name: apply ingress-nginx file
+  shell: kubectl apply -f '/root/k8s/k8s-ingress-nginx.yaml'
+  become: true
+  
+- name: apply ingress-nginx ext file
+  shell: kubectl apply -f '/root/k8s/k8s-ingress-nginx-ext.yaml'
+  become: true
+  
+#############################
+##       dashboard UI      ##
+#############################
+- name: download latest dashboard-ui version
+  get_url:
+    url:  https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended.yaml
+    dest: files/generated/k8s-dashboard-ui.yaml
+    force: true
+  delegate_to: localhost
+  
+- name: copy dashboard-ui file on host
+  copy:
+    src:   files/generated/k8s-dashboard-ui.yaml
+    dest:  /root/k8s/k8s-dashboard-ui.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  
+- name: copy dashboard-ui ext (user account) on host
+  template:
+    src:   k8s-dashboard-ui-ext.j2
+    dest:  /root/k8s/k8s-dashboard-ui-ext.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  register: daemon
+  become: true
+  
+- name: apply dashboard-ui file
+  shell: kubectl apply -f '/root/k8s/k8s-dashboard-ui.yaml'
+  become: true
+  
+- name: apply dashboard-ui ext file
+  shell: kubectl apply -f '/root/k8s/k8s-dashboard-ui-ext.yaml'
   become: true
   
 - name: generate dashboard-ui admin token
   shell: kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
   register: admin_token
+  become: true
   
 - name: Copy admin token to local file
   copy:

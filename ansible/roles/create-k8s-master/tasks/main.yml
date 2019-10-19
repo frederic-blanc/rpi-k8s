@@ -1,15 +1,22 @@
 ---
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:  files/generated
+      state: directory
+  become: true
+  delegate_to: localhost
+  
 - name: Generate local private key (2048 bits, RSA)
   openssl_privatekey:
-    path: "files/{{ domain_name }}.key"
+    path: "files/generated/{{ domain_name }}.key"
     type: RSA
     size: 2048
   delegate_to: localhost
   
 - name: Generate local csr
   openssl_csr:
-    path: "files/{{ domain_name }}.csr"
-    privatekey_path: files/{{ domain_name }}.key
+    path: "files/generated/{{ domain_name }}.csr"
+    privatekey_path: files/generated/{{ domain_name }}.key
     common_name: "{{ certificate_authority.CN }}"
     state_or_province_name: "{{ certificate_authority.ST }}"
     organization_name: "{{ certificate_authority.O }}"
@@ -21,9 +28,9 @@
   
 - name: Generate local Self Signed Certificate Authority
   openssl_certificate:
-    path: "files/{{ domain_name }}.crt"
-    csr_path: files/{{ domain_name }}.csr
-    privatekey_path: files/{{ domain_name }}.key
+    path: "files/generated/{{ domain_name }}.crt"
+    csr_path: files/generated/{{ domain_name }}.csr
+    privatekey_path: files/generated/{{ domain_name }}.key
     provider: selfsigned
     selfsigned_digest: sha256
   delegate_to: localhost
@@ -42,21 +49,9 @@
   shell:  kubeadm reset -f
   become: true
   
-- name: check if flannel interface exist
-  shell: ifconfig | grep 'flannel.1:'
-  register: flannel_interface
-  changed_when: false
-  failed_when: false
-  become: true
-  
-- name: remove old flannel.1 interface
-  shell: ifconfig 'flannel.1' down
-  when: flannel_interface.rc == 0
-  become: true
-  
 - name: Copy key to /etc/kubernetes/pki
   copy: 
-    src:  "files/{{ domain_name }}.key"
+    src:  "files/generated/{{ domain_name }}.key"
     dest: /etc/kubernetes/pki/ca.key
     owner: root
     group: root
@@ -65,7 +60,7 @@
   
 - name: Copy certificate to /etc/kubernetes/pki
   copy: 
-    src:  "files/{{ domain_name }}.crt"
+    src:  "files/generated/{{ domain_name }}.crt"
     dest: /etc/kubernetes/pki/ca.crt
     owner: root
     group: root
@@ -74,11 +69,45 @@
   
 - name: kubernetes with flannel network plugin installation
   block: 
+  - name: download latest flannel pod network version
+    get_url:
+      url:  "https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
+      dest: files/generated/k8s-flannel.yaml
+      force: true
+    delegate_to: localhost
+    
+  - name: Ensures /root/k8s dir exists on controller
+    file: 
+        path:  /root/k8s
+        state: directory
+        owner: root
+        group: root
+        mode:  '0755'
+    become: true
+    
+  - name: copy flannel file on host
+    copy:
+      src:   files/generated/k8s-flannel.yaml
+      dest:  /root/k8s/k8s-flannel.yaml
+      owner: root
+      group: root
+      mode: '0644'
+    
+  - name: check if flannel interface exist
+    shell: ifconfig | grep 'flannel.1:'
+    register: flannel_interface
+    changed_when: false
+    failed_when: false
+    
+  - name: remove old flannel.1 interface
+    shell: ifconfig 'flannel.1' down
+    when: flannel_interface.rc == 0
+    
   - name: Initialize the Kubernetes cluster using kubeadm
     shell: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --cert-dir /etc/kubernetes/pki --pod-network-cidr="10.244.0.0/16"
     
   - name: Install flannel pod network
-    shell: kubectl apply -f 'https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml' --kubeconfig /etc/kubernetes/admin.conf
+    shell: kubectl apply -f '/root/k8s/k8s-flannel.yaml' --kubeconfig /etc/kubernetes/admin.conf
     
   become: true
   when: k8s.network_plugin == 'flannel'
@@ -90,11 +119,34 @@
     register: kubectl_version
     changed_when: False
     
+  - name: download latest weave pod network version
+    get_url:
+      url:  "https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout }}&env.WEAVE_MTU=8912"
+      dest: files/generated/k8s-weave.yaml
+      force: true
+    delegate_to: localhost
+    
+  - name: Ensures /root/k8s dir exists on controller
+    file: 
+        path:  /root/k8s
+        state: directory
+        owner: root
+        group: root
+        mode:  '0755'
+    
+  - name: copy weave file on host
+    copy:
+      src:   files/generated/k8s-weave.yaml
+      dest:  /root/k8s/k8s-weave.yaml
+      owner: root
+      group: root
+      mode: '0644'
+    
   - name: Initialize the Kubernetes cluster using kubeadm
     shell: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --hostname-override "{{ fqdn }}" --cert-dir /etc/kubernetes/pki
     
   - name: Install weave pod network
-    shell: kubectl apply -f 'https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout }}&env.WEAVE_MTU=8912' --kubeconfig /etc/kubernetes/admin.conf
+    shell: kubectl apply -f '/root/k8s-weave.yaml' --kubeconfig /etc/kubernetes/admin.conf
     
   become: true
   when: k8s.network_plugin == 'weave'
@@ -147,6 +199,6 @@
 - name: Copy join command to local file
   copy:
     content: "{{ join_command.stdout_lines[0] }}" 
-    dest: "files/local-join-k8s-cluster.sh"
+    dest: "files/generated/local-join-k8s-cluster.sh"
   delegate_to: localhost
   

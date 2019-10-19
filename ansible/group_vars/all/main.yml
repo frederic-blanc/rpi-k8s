@@ -39,8 +39,9 @@ useful_tools:
 - dnsutils
 
 work_users:
-- fanarie
-# password should be define in a vault or a plein text file as follow
+- frederic
+
+# password should be define in a vault or a plain text file or just here as follow:
 #####################################
 # ---
 # passwords:
