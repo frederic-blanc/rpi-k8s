@@ -37,6 +37,7 @@ useful_tools:
 - htop
 - tree
 - dnsutils
+- dos2unix
 
 work_users:
 - frederic
