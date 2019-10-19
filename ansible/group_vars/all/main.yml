@@ -8,6 +8,20 @@ certificate_authority:
   O:  'YGGDRASIL'
   OU: 'YGGDRASIL.LOCAL'
 
+k8s_dashboard_url: k8s-dashboard.{{ domain_name }}
+k8s_registry_url:  k8s-registry.{{ domain_name }}
+
+ingress_certificate:
+  CN: 'k8s-cluster.{{ domain_name }}'
+  ST: 'MIDGARD'
+  O:  'YGGDRASIL'
+  OU: 'YGGDRASIL.LOCAL'
+  SAN:
+  - "IP:{{ ansible_eth0.ipv4.address }}"
+  - "DNS:{{ fqdn }}"
+  - "DNS:{{ k8s_dashboard_url }}"
+  - "DNS:{{ k8s_registry_url  }}"
+
 gateway: "192.168.1.1"
 domain_name_servers: "192.168.1.254"
 
@@ -25,7 +39,7 @@ useful_tools:
 - dnsutils
 
 work_users:
-- frederic
+- fanarie
 # password should be define in a vault or a plein text file as follow
 #####################################
 # ---
@@ -45,6 +59,4 @@ prompts:
   
 k8s:
   network_plugin: "flannel" # until weave issue on armhf is resolve
-  dashboard_ui:
-    port: 32000
   
