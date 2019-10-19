@@ -38,10 +38,6 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     ingress.kubernetes.io/ssl-passthrough: "true"
 spec:
-  tls:
-  - hosts:
-    - k8s-master.yggdrasil.local
-    secretName: tlssecret
   rules:
   - http:
       paths:
