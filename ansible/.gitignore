@@ -1,9 +1,1 @@
-passwords.yml
-passwords-vault.yml
-vault.yml
-*.key
-*.crt
-*.csr
-local-*.sh
 admin-token.txt
-
