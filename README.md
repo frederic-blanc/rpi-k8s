@@ -11,3 +11,6 @@
   - https://kubernetes.io/docs/concepts/storage/storage-classes/#ceph-rbd
   - https://docs.openshift.com/container-platform/3.5/install_config/storage_examples/ceph_rbd_dynamic_example.html
   - https://github.com/kubernetes/examples/tree/master/volumes
+
+  - https://blog.raveland.org/post/raspian_ceph_en/
+  - https://docs.ceph.com/docs/master/man/8/rbd-nbd/
