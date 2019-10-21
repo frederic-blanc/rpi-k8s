@@ -7,3 +7,7 @@
   - https://bryanapperson.com/blog/the-definitive-guide-ceph-cluster-on-raspberry-pi/
   - http://howtolamp.com/projects/ceph.pdf
   - https://docs.ceph.com/docs/master/install/manual-deployment/#monitor-bootstrapping
+
+  - https://kubernetes.io/docs/concepts/storage/storage-classes/#ceph-rbd
+  - https://docs.openshift.com/container-platform/3.5/install_config/storage_examples/ceph_rbd_dynamic_example.html
+  - https://github.com/kubernetes/examples/tree/master/volumes
