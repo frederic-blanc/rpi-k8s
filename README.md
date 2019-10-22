@@ -15,3 +15,5 @@
   - https://blog.raveland.org/post/raspian_ceph_en/
   - https://docs.ceph.com/docs/master/man/8/rbd-nbd/
   - https://github.com/kubernetes-incubator/external-storage/tree/master/ceph
+  
+  - https://github.com/ceph/ceph-csi
