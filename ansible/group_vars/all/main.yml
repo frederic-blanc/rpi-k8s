@@ -13,9 +13,9 @@ k8s_registry_url:  k8s-registry.{{ domain_name }}
 
 ingress_certificate:
   CN: 'k8s-cluster.{{ domain_name }}'
-  ST: 'MIDGARD'
-  O:  'YGGDRASIL'
-  OU: 'YGGDRASIL.LOCAL'
+  ST: '{{ certificate_authority.ST }}'
+  O:  '{{ certificate_authority.O }}'
+  OU: '{{ certificate_authority.OU }}'
   SAN:
   - "IP:{{ ansible_eth0.ipv4.address }}"
   - "DNS:{{ fqdn }}"
@@ -39,12 +39,10 @@ useful_tools:
 - dnsutils
 - dos2unix
 
-work_users:
-- frederic
-
-# password should be define in a vault or a plain text file or just here as follow:
+# users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################
-# ---
+# work_users:
+# - frederic
 # passwords:
 # - frederic: 'my_password'
 #
@@ -52,7 +50,7 @@ work_users:
 #
 # password_salt: 'my_password_salt'
 #####################################
-## You can generate a salt with the following command:
+# You can generate a salt with the following shell command:
 # cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 
 prompts:
