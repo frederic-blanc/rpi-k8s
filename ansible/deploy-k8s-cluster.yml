@@ -12,5 +12,6 @@
 - name: finalyze k8s cluster
   hosts: master
   roles:
-  - finalize-k8s-cluster
-  
+  - create-k8s-labels
+  - add-k8s-ingress-controller
+  - add-k8s-dashboard-ui
