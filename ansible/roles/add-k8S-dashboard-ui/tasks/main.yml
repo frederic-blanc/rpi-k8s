@@ -1,0 +1,56 @@
+---
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:  files/generated
+      state: directory
+  become: true
+  delegate_to: localhost
+
+#############################
+##       dashboard UI      ##
+#############################
+- name: download latest dashboard-ui version
+  get_url:
+    url:  https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended.yaml
+    dest: files/generated/k8s-dashboard-ui.yaml
+    force: true
+  delegate_to: localhost
+  
+- name: copy dashboard-ui file on host
+  copy:
+    src:   files/generated/k8s-dashboard-ui.yaml
+    dest:  /root/k8s/k8s-dashboard-ui.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  
+- name: copy dashboard-ui ext (user account) on host
+  template:
+    src:   k8s-dashboard-ui-ext.j2
+    dest:  /root/k8s/k8s-dashboard-ui-ext.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  register: daemon
+  become: true
+  
+- name: apply dashboard-ui file
+  shell: kubectl apply -f '/root/k8s/k8s-dashboard-ui.yaml'
+  become: true
+  
+- name: apply dashboard-ui ext file
+  shell: kubectl apply -f '/root/k8s/k8s-dashboard-ui-ext.yaml'
+  become: true
+  
+- name: generate dashboard-ui admin token
+  shell: kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+  register: admin_token
+  become: true
+  
+- name: Copy admin token to local file
+  copy:
+    content: "{{ admin_token.stdout }}" 
+    dest: "admin-token.txt"
+  delegate_to: localhost
+  
