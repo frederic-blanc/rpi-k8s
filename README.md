@@ -6,8 +6,7 @@
   apt update && apt -y dist-upgrade && reboot
   ```
   *flannel* just works fine because it provide all the ARCHs in its ConfigMap installation
-  
-- add ceph ansible cluster installation 
+
 - deploy ceph-\*-provisioner to allocate persistent filesystem
 
 # use arm64 ubuntu 19.10 image
