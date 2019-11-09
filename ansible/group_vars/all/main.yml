@@ -42,9 +42,8 @@ useful_tools:
 # users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################
 # work_users:
-# - frederic
-# passwords:
-# - frederic: 'my_password'
+# - name: 'frederic'
+#   password: 'my_password'
 #
 # root_password: 'my_root_password'
 #
@@ -59,4 +58,18 @@ prompts:
   
 k8s:
   network_plugin: "flannel" # until weave issue on armhf is resolve
+  
+
+ceph:
+  net_mask: '192.168.1.0/24'
+  cluster_name: 'ceph'
+  osd_drive: '/dev/sda'
+  # Less     than   5 OSDs set pg_num to  128
+  # Between  5 and 10 OSDs set pg_num to  512
+  # Between 10 and 50 OSDs set pg_num to 4096
+  osd_pool:
+    default_pg_num:   128
+    default_pgp_num:  128
+    default_size:     2
+    default_min_size: 1
   

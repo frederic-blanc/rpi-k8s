@@ -1,0 +1,11 @@
+---
+- name: create ceph mon
+  hosts: master
+  roles:
+  - create-ceph-mon
+  
+- name: create ceph mon
+  hosts: worker
+  roles:
+  - create-ceph-osd
+  

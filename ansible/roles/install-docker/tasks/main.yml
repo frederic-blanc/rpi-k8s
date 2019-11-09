@@ -129,7 +129,7 @@
 # add docker group to work_users
 - name: add docker group to work_users
   user:
-    name: '{{ item }}'
+    name: '{{ item.name }}'
     groups: docker
     append: yes
   with_items: "{{ work_users }}"

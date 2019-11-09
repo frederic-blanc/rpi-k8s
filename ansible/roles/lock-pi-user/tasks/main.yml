@@ -5,7 +5,7 @@
 - name: 
   set_fact:
     keep_enable: false
-  when: item != 'pi' and user_passwords is defined and user_passwords[item] is defined
+  when: item.name != 'pi' and item.password is defined
   with_items: "{{ work_users }}"
   
 - name: disable pi account password

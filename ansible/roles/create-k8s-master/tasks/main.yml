@@ -172,10 +172,10 @@
   
 - name: Ensures .kube dir exists for users
   file: 
-    path:  "/home/{{ item }}/.kube"
+    path:  "/home/{{ item.name }}/.kube"
     state: directory
-    owner: "{{ item }}"
-    group: "{{ item }}"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
     mode:  '0700'
   with_items: "{{ work_users }}"
   become: true
@@ -183,9 +183,9 @@
 - name: copy kube config to users
   copy:
     src:   /etc/kubernetes/admin.conf
-    dest:  "/home/{{ item }}/.kube/config"
-    owner: "{{ item }}"
-    group: "{{ item }}"
+    dest:  "/home/{{ item.name }}/.kube/config"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
     mode:  '0400'
     remote_src: yes
   with_items: "{{ work_users }}"

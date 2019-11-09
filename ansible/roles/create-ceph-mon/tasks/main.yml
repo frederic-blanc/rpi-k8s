@@ -1,0 +1,211 @@
+---
+# first we clean 
+
+## stop and disable ceph services if exist
+- name: stop and disable service mon if exist
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  with_items:
+  - "ceph-mon@{{ hostname }}"
+  - "ceph-mgr@{{ hostname }}"
+  - "ceph-mds@{{ hostname }}"
+  failed_when: false
+  become: true
+  
+## remove ceph packages
+- name: remove ceph mon packages and their dependencies
+  apt: 
+    name: "{{ packages }}"
+    state: absent
+    autoremove: yes
+    force_apt_get: yes
+    purge: yes
+  vars:
+    packages:
+    - ceph-mon
+    - ceph-mgr
+    - ceph-mds
+  become: true
+  
+## remove ceph folders
+- name: Remove ceph folders
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+  - /run/ceph
+  - /var/lib/ceph
+  - /etc/ceph
+  become: true
+  
+# then we can install ceph mon services
+  
+- name: Update and upgrade apt packages
+  apt:
+    upgrade: dist
+    update_cache: yes
+    force_apt_get: yes
+  become: true
+  
+- name: install ceph mon packages and their dependencies
+  apt: 
+    name: "{{ packages }}"
+    state: present
+    autoremove: yes
+    force_apt_get: yes
+    install_recommends: no
+  vars:
+    packages:
+    - ceph-mon
+    - ceph-mgr
+    - ceph-mds
+  become: true
+  
+- name: Generate ceph uuid
+  command:  uuidgen
+  register: uuidgen_command
+  become: true
+  
+- name: set_fact uuid from uuidgen_command
+  set_fact:
+    ceph_uuid: "{{ uuidgen_command.stdout_lines[0] }}" 
+  
+- name: Generate ceph.conf on local
+  template:
+    src:   ceph.j2
+    dest:  files/generated/ceph.conf
+  delegate_to: localhost
+  
+- name: create ceph folders
+  file:
+    path:  "{{ item }}"
+    owner: ceph
+    group: ceph
+    mode: '0755'
+    state: directory
+  with_items:
+  - /var/run/ceph
+  - /etc/ceph
+  become: true
+  
+- name: copy ceph conf file on host
+  copy:
+    src:   files/generated/ceph.conf
+    dest:  /etc/ceph/ceph.conf
+    owner: ceph
+    group: ceph
+    mode: '0644'
+  become: true
+  
+- name: generate ceph.client.admin.keyring
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "rm -f /tmp/ceph.mon.keyring"
+  - "ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'"
+  - "chown ceph:ceph /tmp/ceph.mon.keyring"
+  - "ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring --gen-key -n client.admin --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow *' --cap mgr 'allow *'"
+  - "ceph-authtool --create-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring --gen-key -n client.bootstrap-osd --cap mon 'profile bootstrap-osd' --cap mgr 'allow r'"
+  - "ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring"
+  - "ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring"
+  become: true
+  
+- name: copy ceph.bootstrap-osd.keyring to local
+  fetch:
+    src:  /var/lib/ceph/bootstrap-osd/ceph.keyring
+    dest: files/generated/ceph.bootstrap-osd.keyring
+    flat: yes
+  become: true
+  
+- name: copy ceph.client.admin.keyring to local
+  fetch:
+    src:  /etc/ceph/ceph.client.admin.keyring
+    dest: files/generated/ceph.client.admin.keyring
+    flat: yes
+  become: true
+  
+# install ceph mon
+- name: init ceph mon
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "rm -f /tmp/monmap"
+  - "monmaptool --create --add {{ hostname }} {{ ansible_eth0.ipv4.address }} --fsid {{ ceph_uuid }} /tmp/monmap"
+  - "mkdir --mode=755 /var/lib/ceph/mon/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "chown -R ceph:ceph /var/lib/ceph/mon/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "sudo -u ceph ceph-mon --cluster {{ ceph.cluster_name }} --mkfs -i {{ hostname }} --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring"
+  - "rm -f /tmp/monmap"
+  become: true
+  
+- name: Clean tmp keyring
+  file:
+    path: /tmp/ceph.mon.keyring
+    state: absent
+  become: true
+  
+- name: add CLUSTER directive to ceph services env
+  lineinfile:
+    path:  /etc/default/ceph
+    line: "CLUSTER={{ ceph.cluster_name }}"
+    state: present
+    create: yes
+  become: true
+  
+- name: start and enable ceph mon service
+  systemd:
+    name: "ceph-mon@{{ hostname }}"
+    state: started
+    enabled: true
+  become: true
+  
+# install ceph mgr
+- name: init ceph mgr
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "mkdir --mode=755 /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "chown -R ceph:ceph /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "ceph auth get-or-create mgr.{{ hostname }} mon 'allow profile mgr' osd 'allow *' mds 'allow *' > /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+  - "chown ceph:ceph /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+  become: true
+  
+- name: start and enable ceph mgr service
+  systemd:
+    name: "ceph-mgr@{{ hostname }}"
+    state: started
+    enabled: true
+  become: true
+  
+# install ceph mds
+- name: init ceph mds
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "mkdir --mode=755 /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "chown -R ceph:ceph /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}"
+  - "ceph-authtool --create-keyring /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring --gen-key -n mds.{{ hostname }}"
+  - "ceph auth add mds.{{ hostname }} osd 'allow rwx' mds 'allow' mon 'allow profile mds' -i /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+  - "chown ceph:ceph /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+  become: true
+  
+- name: correct ceph mds service file
+  replace:
+    path: /lib/systemd/system/ceph-mds@.service
+    regexp: '^ExecStart=(.*) --setuser ceph --setgroup ceph$'
+    replace: 'ExecStart=\1 --setuser ceph --setgroup ceph -m %i:6789'
+  become: true
+  
+- name: start and enable ceph mds service
+  systemd:
+    name: "ceph-mds@{{ hostname }}"
+    state: started
+    daemon_reload: yes
+    enabled: true
+  become: true
+  
