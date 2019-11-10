@@ -1,0 +1,70 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: rdb-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd
+  resources:
+    requests:
+      storage: 4000Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: registry
+  labels:
+    app: registry  
+    namespace: registry
+spec:
+  containers:
+  - name: registry
+    image: registry:2
+    ports:
+    - containerPort: 5000
+    volumeMounts:
+    - mountPath: /var/lib/registry
+      name: registry-data
+  volumes:
+  - name: registry-data
+    persistentVolumeClaim:
+      claimName: rdb-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-service
+spec:
+  ports:
+  - name: http
+    targetPort: 5000
+    port: 5000
+  selector:
+    app: registry
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: registry-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size:    "0" 
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600" 
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600" 
+spec:
+  tls:
+  - hosts:
+    - k8s-registry.yggdrasil.local
+    secretName: tlssecret
+  rules:
+  - http:
+      paths:
+        - path: /
+          backend:
+            serviceName: registry-service
+            servicePort: 5000
+---
