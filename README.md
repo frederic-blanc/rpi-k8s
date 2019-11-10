@@ -5,7 +5,7 @@
   ```bash
   sudo apt update && sudo apt -y dist-upgrade && sudo reboot
   ```
-  The firmware upgrade can be forced to pre-releases kernel with thz foolowing command:
+  The firmware upgrade can be forced to pre-releases kernel with the following command:
   ```bash
   sudo rpi-update
   sudo reboot
