@@ -3,10 +3,11 @@
   Cause by an error in the current rpi-kernel 4.19.75-v7l+, it tricks docker and made it pull an incorrect image arch version (at least not the armhf one)<br/>
   Fix in kernel 4.19.79-v7l+, but it might take a few days to be published/mainlined by the Raspberry Pi Foundation, so that everyone will be able to fix things by running...
   ```bash
-  apt update && apt -y dist-upgrade && reboot
+  sudo apt update && sudo apt -y dist-upgrade && sudo reboot
   ```
   The firmware upgrade can be forced to pre-releases kernel with thz foolowing command:
   ```bash
   sudo rpi-update
+  sudo reboot
   ```
   *flannel* just works fine because it provide all the ARCHs in its ConfigMap installation
