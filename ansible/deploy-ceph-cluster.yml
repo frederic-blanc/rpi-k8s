@@ -9,3 +9,10 @@
   roles:
   - create-ceph-osd
   
+- name: finalyze ceph deployment on k8s cluster
+  hosts: master
+  roles:
+  - create-k8s-rbd-pool
+  - create-k8s-rbd-storage-class-storage
+  - add-k8s-rbd-provisioner
+  

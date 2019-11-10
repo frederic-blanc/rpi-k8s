@@ -1,0 +1,39 @@
+---
+# create rbd pool
+- name: set default pg_num value if needed
+  set_fact: 
+    pg_num: "{{ ceph.osd_pool.default_pg_num }}"
+  when: ceph.rbd_pool.pg_num is undefined
+  
+- name: set default pgp_num value if needed
+  set_fact: 
+    pgp_num: "{{ ceph.osd_pool.default_pgp_num }}"
+  when: ceph.rbd_pool.pgp_num is undefined
+  
+- name: create kube rbd pool
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "ceph osd pool delete   {{ ceph.rbd_pool.name }} {{ ceph.rbd_pool.name }} --yes-i-really-really-mean-it"
+  - "ceph osd pool create   {{ ceph.rbd_pool.name }}            {{ pg_num  }}"
+  - "ceph osd pool set      {{ ceph.rbd_pool.name }} pgp_num    {{ pgp_num }}"
+  - "ceph osd pool application  enable  {{ ceph.rbd_pool.name }} rbd"
+  become: true
+  
+# generate and retrive ceph.client.kube.keyring
+- name: generate ceph.client.kube.keyring
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "ceph auth get-or-create client.{{ ceph.rbd_pool.user }} mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool={{ ceph.rbd_pool.name }}' -o /etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
+  become: true
+  
+- name: copy ceph.client.kube.keyring to local
+  fetch:
+    src:  /etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring
+    dest: files/generated/ceph.client.{{ ceph.rbd_pool.name }}.keyring
+    flat: yes
+  become: true
+  

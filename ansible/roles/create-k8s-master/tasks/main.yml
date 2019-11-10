@@ -202,3 +202,9 @@
     dest: "files/generated/local-join-k8s-cluster.sh"
   delegate_to: localhost
   
+- name: Create empty label node command to local file to avoid concurrent creation
+  copy:
+    content: ""
+    dest: files/generated/local-label-node-k8s-cluster.sh
+  delegate_to: localhost
+  

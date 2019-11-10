@@ -1,0 +1,51 @@
+---
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:  files/generated
+      state: directory
+  become: true
+  delegate_to: localhost
+  
+- name: download latest rbd-provisioner version
+  get_url:
+    url:  "https://raw.githubusercontent.com/frederic-blanc/k8s-provisioner/master/ceph/deploy/k8s-rbd-provisioner.yaml"
+    dest: files/generated/k8s-rbd-provisioner.yaml
+    force: true
+  delegate_to: localhost
+  
+- name: Ensures /root/k8s dir exists on controller
+  file: 
+      path:  /root/k8s
+      state: directory
+      owner: root
+      group: root
+      mode:  '0755'
+  become: true
+  
+- name: copy rbd-provisioner file on host
+  copy:
+    src:   files/generated/k8s-rbd-provisioner.yaml
+    dest:  /root/k8s/k8s-rbd-provisioner.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  
+- name: copy generated storageclass file on host
+  copy:
+    src:   files/generated/k8s-rbd-storage-class.yaml
+    dest:  /root/k8s/k8s-rbd-storage-class.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  
+- name: Install rbd-provisioner
+  shell: "{{ item }}"
+  args:
+    warn: false
+  with_items:
+  - "kubectl apply -f '/root/k8s/k8s-rbd-provisioner.yaml'   --kubeconfig /etc/kubernetes/admin.conf"
+  - "kubectl apply -f '/root/k8s/k8s-rbd-storage-class.yaml' --kubeconfig /etc/kubernetes/admin.conf"
+  become: true
+  

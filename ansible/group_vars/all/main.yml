@@ -72,4 +72,9 @@ ceph:
     default_pgp_num:  128
     default_size:     2
     default_min_size: 1
+  rbd_pool:
+    name: kube
+    user: kube
+#   pg_num:  128
+#   pgp_num: 128
   

@@ -80,6 +80,15 @@
     line: '            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate'
   delegate_to: localhost
   
+- name: Ensures /root/k8s dir exists on controller
+  file: 
+      path:  /root/k8s
+      state: directory
+      owner: root
+      group: root
+      mode:  '0755'
+  become: true
+  
 - name: copy ingress-nginx file on host
   copy:
     src:   files/generated/k8s-ingress-nginx.yaml

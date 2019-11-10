@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ceph-admin-secret
+  namespace: rbd-provisioner
+data:
+  key: {{ ceph_client_admin_keyring_bae64 }}
+type: kubernetes.io/rbd
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ceph-user-secret
+  namespace: rbd-provisioner
+data:
+  key: {{ ceph_client_user_keyring_bae64 }}
+type: kubernetes.io/rbd
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: rbd
+  namespace: rbd-provisioner
+provisioner: ceph.com/rbd
+parameters:
+  monitors: {{ ansible_eth0.ipv4.address }}:6789
+  pool: {{ ceph.rbd_pool.name }}
+  adminId: admin
+  adminSecretNamespace: rbd-provisioner
+  adminSecretName: ceph-admin-secret
+  userId: {{ ceph.rbd_pool.user }}
+  userSecretNamespace: rbd-provisioner
+  userSecretName: ceph-user-secret
+  imageFormat: "2"
+  imageFeatures: layering
+---

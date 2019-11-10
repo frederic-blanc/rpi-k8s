@@ -9,25 +9,17 @@
 - name: Copy the label node command to server location
   copy: 
     src:  files/generated/local-label-node-k8s-cluster.sh
-    dest: /tmp/label-node-k8s-cluster.sh
+    dest: /tmp/local-label-node-k8s-cluster.sh
     mode: 0700
   become: true
   
 - name: set workers type
-  command: sh /tmp/label-node-k8s-cluster.sh
+  command: sh /tmp/local-label-node-k8s-cluster.sh
   become: true
   
 - name: remove the label node command to server location
   file: 
-    path: /tmp/label-node-k8s-cluster.sh
+    path: /tmp/local-label-node-k8s-cluster.sh
     state: absent
   become: true
   
-- name: Ensures /root/k8s dir exists on controller
-  file: 
-      path:  /root/k8s
-      state: directory
-      owner: root
-      group: root
-      mode:  '0755'
-  become: true

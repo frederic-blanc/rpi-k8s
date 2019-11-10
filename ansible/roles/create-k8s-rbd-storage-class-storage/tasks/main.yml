@@ -1,0 +1,27 @@
+---
+- name: Generate base64 client.admin.keyring value
+  shell:  ceph auth get-key client.admin | base64
+  register: ceph_client_admin_keyring_bae64_command
+  changed_when: false
+  become: true
+  
+- name: set_fact ceph_client_admin_keyring_bae64 from ceph_client_admin_keyring_bae64_command
+  set_fact:
+    ceph_client_admin_keyring_bae64: "{{ ceph_client_admin_keyring_bae64_command.stdout_lines[0] }}"
+  
+- name: Generate base64 client.user.keyring value
+  shell:  ceph auth get-key client.{{ ceph.rbd_pool.user }} | base64
+  register: ceph_client_user_keyring_bae64_command
+  changed_when: false
+  become: true
+  
+- name: set_fact ceph_client_admin_keyring_bae64 from ceph_client_user_keyring_bae64_command
+  set_fact:
+    ceph_client_user_keyring_bae64: "{{ ceph_client_user_keyring_bae64_command.stdout_lines[0] }}"
+  
+- name: Generate storage class file on local
+  template:
+    src:   k8s-rbd-storage-class.j2
+    dest:  files/generated/k8s-rbd-storage-class.yaml
+  delegate_to: localhost
+  
