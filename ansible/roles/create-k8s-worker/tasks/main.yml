@@ -31,7 +31,6 @@
     
   become: true
   when: k8s.network_plugin == 'flannel'
-
   
 - name: attach the node to cluster
   command: sh /tmp/local-join-k8s-cluster.sh
