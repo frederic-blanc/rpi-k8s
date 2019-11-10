@@ -5,4 +5,8 @@
   ```bash
   apt update && apt -y dist-upgrade && reboot
   ```
+  The firmware upgrade can be forced to pre-releases kernel with thz foolowing command:
+  ```bash
+  sudo rpi-update
+  ```
   *flannel* just works fine because it provide all the ARCHs in its ConfigMap installation
