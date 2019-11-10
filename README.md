@@ -7,8 +7,6 @@
   ```
   *flannel* just works fine because it provide all the ARCHs in its ConfigMap installation
 
-- deploy ceph-\*-provisioner to allocate persistent filesystem
-
 # use arm64 ubuntu 19.10 image
 - https://ubuntu.com/blog/roadmap-for-official-support-for-the-raspberry-pi-4<br/>
   pending USB kernel bug patch
