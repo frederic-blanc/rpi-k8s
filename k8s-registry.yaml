@@ -12,30 +12,45 @@ spec:
       storage: 4000Mi
 ---
 apiVersion: v1
-kind: Pod
+kind: Namespace
 metadata:
   name: registry
-  labels:
-    app: registry  
-    namespace: registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: registry
 spec:
-  containers:
-  - name: registry
-    image: registry:2
-    ports:
-    - containerPort: 5000
-    volumeMounts:
-    - mountPath: /var/lib/registry
-      name: registry-data
-  volumes:
-  - name: registry-data
-    persistentVolumeClaim:
-      claimName: rdb-claim
+  selector:
+    matchLabels:
+      app: registry
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2
+          ports:
+          - containerPort: 5000
+          volumeMounts:
+          - mountPath: /var/lib/registry
+            name: registry-data
+        volumes:
+        - name: registry-data
+          persistentVolumeClaim:
+            claimName: rdb-claim
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: registry-service
+  namespace: registry
 spec:
   ports:
   - name: http
@@ -48,6 +63,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: registry-ingress
+  namespace: registry
   annotations:
     kubernetes.io/ingress.class: nginx
     ingress.kubernetes.io/ssl-passthrough: "true"
