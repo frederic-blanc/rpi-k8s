@@ -60,6 +60,6 @@
 - name: Copy admin token to local file
   copy:
     content: "{{ admin_token.stdout }}" 
-    dest: "admin-token.txt"
+    dest: "dashboard-ui-token.txt"
   delegate_to: localhost
   
