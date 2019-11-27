@@ -4,6 +4,7 @@ See [armhf](https://github.com/frederic-blanc/rpi-k8s/tree/armhf) branch for the
 
 # use arm64 ubuntu 19.10 image
 - https://ubuntu.com/blog/roadmap-for-official-support-for-the-raspberry-pi-4<br/>
+  http://cdimage.ubuntu.com/ubuntu/releases/19.10/release/<br/>
   pending USB kernel bug patch
 
 
