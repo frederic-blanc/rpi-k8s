@@ -9,5 +9,6 @@ See [armhf](https://github.com/frederic-blanc/rpi-k8s/tree/armhf) branch for the
 
 
 https://computingforgeeks.com/how-to-configure-static-ip-address-on-ubuntu/
+https://itsfoss.com/disable-ipv6-ubuntu-linux/
 
 http://manpages.ubuntu.com/manpages/xenial/man7/dracut.cmdline.7.html
