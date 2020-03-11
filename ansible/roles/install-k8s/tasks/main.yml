@@ -36,6 +36,7 @@
   become: true
   
 ## disable swap
+## seem to be already disable (docker install perhaps)
 #- name: stop service dphys-swapfile
 #  systemd:
 #    state: stopped
@@ -76,6 +77,7 @@
   with_items:
   - "iptables"
   - "ip6tables"
+  - "arptables"
   - "ebtables"
   register: __tables_legacy
   become: true
