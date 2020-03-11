@@ -9,3 +9,6 @@ I prefer the 18.04 LTS version, instead of the latest one, which support ends in
 To manage a ip defined and ubuntu account no expired, as well as a non update kernel at boot (this will be managed by the ansible install), I use cloud-init. Template files can be found in the cloud-init folder and it must copied in the /boot partition just after the image burn. Just Change your targeted IP address in the network-config file.
 
 For the moment only the prepare-k8s-cluster has been updated to work on this new arm64 ubuntu.
+
+Use Calico as networkplugin this time:
+https://docs.projectcalico.org/getting-started/kubernetes/quickstart
