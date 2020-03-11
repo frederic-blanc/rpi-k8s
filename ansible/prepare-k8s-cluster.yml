@@ -8,8 +8,8 @@
   - install-docker
   - install-k8s
   
-- name: lock pi account
+- name: lock ubuntu account
   hosts: all
   roles:
-  - lock-pi-user
+  - lock-ubuntu-user
   

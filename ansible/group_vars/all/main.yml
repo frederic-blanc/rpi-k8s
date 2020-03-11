@@ -23,7 +23,8 @@ ingress_certificate:
   - "DNS:{{ k8s_registry_url  }}"
 
 gateway: "192.168.1.1"
-domain_name_servers: "192.168.1.254"
+domain_name_servers:
+- "192.168.1.254"
 
 timezone: "Europe/Paris"
 
@@ -38,6 +39,7 @@ useful_tools:
 - tree
 - dnsutils
 - dos2unix
+- unzip
 
 # users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################

@@ -1,0 +1,14 @@
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+      - "{{ ansible_eth0.ipv4.address }}/24"
+      gateway4: {{ gateway }}
+      nameservers:
+        addresses:
+{% for item in domain_name_servers %}
+        - "{{ item }}"
+{% endfor %}

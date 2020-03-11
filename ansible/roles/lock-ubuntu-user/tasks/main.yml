@@ -5,12 +5,12 @@
 - name: 
   set_fact:
     keep_enable: false
-  when: item.name != 'pi' and item.password is defined
+  when: item.name != 'ubuntu' and item.password is defined
   with_items: "{{ work_users }}"
   
-- name: disable pi account password
+- name: disable ubuntu account password
   user:
-    name: "pi"
+    name: "ubuntu"
     password_lock: yes
   when: keep_enable|default(true) is defined
   become: true

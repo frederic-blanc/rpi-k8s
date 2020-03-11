@@ -4,9 +4,3 @@ docker:
   storage_driver: "overlay2"
   concurrent_uploads: 1
   
-  repository:
-    deb_arch: armhf
-    dist:     raspbian
-    version:  buster
-    channel:  stable
-  

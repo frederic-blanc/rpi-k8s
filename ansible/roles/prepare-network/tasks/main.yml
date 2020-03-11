@@ -1,30 +1,30 @@
 ---
 # disable IPV6
-- name: ensure /boot/cmdline.txt exist
+- name: ensure /boot/firmware/nobtcmd.txt exist
   copy:
     content: ""
-    dest:  /boot/cmdline.txt
+    dest:  /boot/firmware/nobtcmd.txt
     force: no
     owner: root
     group: root
     mode:  '0644'
   become: true
   
-- name: check cmdline ipv6.disable=1
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt ) | grep -qq '^ipv6.disable=1$'
+- name: check nobtcmd ipv6.disable=1
+  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^ipv6.disable=1$'
   register: cmdline_ipv6_disable
   failed_when:  false
   changed_when: false
   
-- name: add   cmdline ipv6.disable_1 if needed
+- name: add   nobtcmd ipv6.disable_1 if needed
   shell: "{{ item }}"
   args:
     warn: false
   when: cmdline_ipv6_disable.rc != 0
   with_items:
-  - cp -pf /boot/cmdline.txt /tmp/cmdline.txt
-  - (tr -s '[:space:]+ ' '\n' < /tmp/cmdline.txt | sed '/^ipv6.disable=.*$/d;' ; printf "\nipv6.disable=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/cmdline.txt
-  - rm -f /tmp/cmdline.txt
+  - cp -pf /boot/firmware/nobtcmd.txt /tmp/nobtcmd.txt
+  - (tr -s '[:space:]+ ' '\n' < /tmp/nobtcmd.txt | sed '/^ipv6.disable=.*$/d;' ; printf "\nipv6.disable=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/firmware/nobtcmd.txt
+  - rm -f /tmp/nobtcmd.txt
   become: true
   
 - name: comment ipv6 hosts lines
@@ -40,13 +40,6 @@
     name: "{{ hostname }}"
   become: true
   
-- name: remove raspberry from hosts
-  lineinfile:
-    path: /etc/hosts
-    state: absent
-    regexp: raspberrypi
-  become: true
-  
 - name: add hotname and fqdn to /etc/hosts
   blockinfile:
     path: /etc/hosts
@@ -56,32 +49,64 @@
   become: true
   
 # set static IP
-- name: set static IP
-  blockinfile:
-    path: /etc/dhcpcd.conf
-    block: |
-      interface eth0
-      static    ip_address={{ ansible_eth0.ipv4.address }}
-      static    routers={{ gateway }}
-      static    domain_name_servers={{ domain_name_servers }}
-  register: dhcpcd_static_ip
+- name: install netplan config file
+  template:
+    src:    50-eth0-ansible.yaml.j2
+    dest:   /etc/netplan/50-eth0-ansible.yaml
+    owner:  root
+    group:  root
+    mode:   '0644'
+  register: netplan_eth0_ansible
+  become:   true
+  
+- name: remove old cloud-init netplan config file
+  file:
+    path:   /etc/netplan/50-cloud-init.yaml
+    state:  absent
+  register: netplan_cloud_init
+  become:   true
+  
+- name: apply netplan change
+  shell:    "netplan apply"
+  when: netplan_eth0_ansible.changed or netplan_cloud_init.changed
   become: true
   
-- name: check  cmdline ip
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/cmdline.txt ) | grep -qq '^ip=.*$'
+- name: restart service networkd
+  systemd:
+    state: restarted
+    name:  systemd-networkd
+  when: netplan_eth0_ansible.changed or netplan_cloud_init.changed
+  become: true
+  
+- name: ensure that nobtcmd.txt cmdline is used
+  lineinfile:
+    path:   /boot/firmware/config.txt
+    regexp: '^cmdline='
+    line:   "cmdline=nobtcmd.txt"
+  become: true
+  
+- name: ensure that nobtcmd.txt cmdline is used
+  lineinfile:
+    path:   /boot/firmware/syscfg.txt
+    regexp: '^include '
+    line:   "include nobtcfg.txt"
+  become: true
+  
+- name: check  nobtcmd ip
+  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^ip=.*$'
   register: cmdline_ip
   failed_when:  false
   changed_when: false
   
-- name: remove cmdline ip if needed
+- name: remove nobtcmd ip if needed
   shell: "{{ item }}"
   args:
     warn: false
   when: cmdline_ip.rc == 0
   with_items:
-  - cp -pf /boot/cmdline.txt /tmp/cmdline.txt
-  - (tr -s '[:space:]+ ' '\n' < /tmp/cmdline.txt | sed '/^ip\=.*$/d;') | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/cmdline.txt
-  - rm -f /tmp/cmdline.txt
+  - cp -pf /boot/firmware/nobtcmd.txt /tmp/nobtcmd.txt
+  - (tr -s '[:space:]+ ' '\n' < /tmp/nobtcmd.txt | sed '/^ip\=.*$/d;') | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/firmware/nobtcmd.txt
+  - rm -f /tmp/nobtcmd.txt
   become: true
   
 # disable wifi and bluetooth
@@ -91,15 +116,13 @@
     state: stopped
     enabled: false
   with_items:
-  - hciuart
   - wpa_supplicant
-  - bluetooth
   become: true
   
-- name: ensure /boot/config.txt exist
+- name: ensure /boot/firmware/config.txt exist
   copy:
     content: "[all]"
-    dest:  /boot/config.txt
+    dest:  /boot/firmware/config.txt
     force: no
     owner: root
     group: root
@@ -108,7 +131,7 @@
   
 - name: add module bt and wifi toe disable list
   blockinfile:
-    path: /boot/config.txt
+    path: /boot/firmware/nobtcfg.txt
     insertafter: "[all]"
     block: |
       dtoverlay=disable-wifi
@@ -119,6 +142,6 @@
 # reboot if needed
 - name: reboot on change
   reboot:
-  when: cmdline_ipv6_disable.rc != 0 or cmdline_ip.rc == 0 or dhcpcd_static_ip.changed or config_wifi_bt.changed
+  when: cmdline_ipv6_disable.rc != 0 or cmdline_ip.rc == 0 or config_wifi_bt.changed
   become: true
   
