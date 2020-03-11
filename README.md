@@ -2,13 +2,10 @@
 See [armhf](https://github.com/frederic-blanc/rpi-k8s/tree/armhf) branch for the raspbian:buster 32bits deployment<br/>
 [master](https://github.com/frederic-blanc/rpi-k8s) branch is working in progress for an arm64 version.
 
-# use arm64 ubuntu 19.10 image
-- https://ubuntu.com/blog/roadmap-for-official-support-for-the-raspberry-pi-4<br/>
-  http://cdimage.ubuntu.com/ubuntu/releases/19.10/release/<br/>
-  pending USB kernel bug patch
+# use arm64 ubuntu 18.04 LTS
+The 64bits image can be found here: https://ubuntu.com/download/raspberry-pi
+I prefer the 18.04 LTS version, instead of the latest one, which support ends in june 2020
 
+To manage a ip defined and ubuntu account no expired, as well as a non update kernel at boot (this will be managed by the ansible install), I use cloud-init. Template files can be found in the cloud-init folder and it must copied in the /boot partition just after the image burn. Just Change your targeted IP address in the network-config file.
 
-https://computingforgeeks.com/how-to-configure-static-ip-address-on-ubuntu/
-https://itsfoss.com/disable-ipv6-ubuntu-linux/
-
-http://manpages.ubuntu.com/manpages/xenial/man7/dracut.cmdline.7.html
+For the moment only the prepare-k8s-cluster has been updated to work on this new arm64 ubuntu<
