@@ -12,3 +12,10 @@ For the moment only the prepare-k8s-cluster has been updated to work on this new
 
 Use Calico as networkplugin this time:
 https://docs.projectcalico.org/getting-started/kubernetes/quickstart
+* create /etc/NetworkManager/conf.d/calico.conf to prevent NetworkManager from interfering with the interfaces:
+```
+[keyfile]
+unmanaged-devices=interface-name:cali*;interface-name:tunl*
+```
+* set sysctl -w net.netfilter.nf_conntrack_max=1000000
+  echo "net.netfilter.nf_conntrack_max=1000000" >> /etc/sysctl.conf
