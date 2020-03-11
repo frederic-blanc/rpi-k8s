@@ -65,7 +65,9 @@
   vars:
     packages:
     - conntrack
+    - iptables
     - ebtables
+    - arptables
     - ethtool
     - socat
   become: true
