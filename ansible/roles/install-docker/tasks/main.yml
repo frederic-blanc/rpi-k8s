@@ -73,34 +73,6 @@
   when: cgroup_enable_cpuset.rc != 0 or cgroup_enable_memory.rc != 0 or cgroup_memory_1.rc != 0 or swapaccount_1.rc != 0
   become: true
   
-## Install docker repository
-#- name: Install package to manage access to https repositories
-#  apt:
-#    name:  "{{ packages }}"
-#    state:  present
-#    update_cache: yes
-#    autoremove: yes
-#    force_apt_get: yes
-#  vars:
-#    packages:
-#    - apt-transport-https
-#    - ca-certificates
-#    - gnupg-agent
-#    - software-properties-common
-#  become: true
-#  
-#- name: Add an apt signing key for Docker repo
-#  apt_key:
-#    url:   "https://download.docker.com/linux/{{ docker.repository.dist }}/gpg"
-#    state: present
-#  become: true
-#  
-#- name: Add apt Docker repo
-#  apt_repository:
-#    repo: deb [arch={{ docker.repository.deb_arch }}] https://download.docker.com/linux/{{ docker.repository.dist }} {{ docker.repository.version }} {{ docker.repository.channel }}
-#    state: present
-#  become: true
-  
 # Install docker packages
 - name: Install docker and its dependencies
   apt: 
