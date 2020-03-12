@@ -32,6 +32,36 @@
   become: true
   when: k8s.network_plugin == 'flannel'
   
+- name: kubernetes with calico  network plugin config
+  block:      
+  - name: Create networking exception for calico
+    copy:
+      dest:     /etc/NetworkManager/conf.d/calico.conf
+      content:  |
+        [keyfile]
+        unmanaged-devices=interface-name:cali*;interface-name:tunl*
+      owner:      root
+      group:      root
+      mode:       '0644'
+    register:     networking_exception_for_calico
+    
+  - name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
+    sysctl:
+      name:       net.netfilter.nf_conntrack_max
+      value:      "1000000"
+      state:      present
+      sysctl_set: yes
+    register:     net_netfilter_nf_conntrack_max
+    
+  - name: restart service networkd
+    systemd:
+      state: restarted
+      name:  systemd-networkd
+    when: networking_exception_for_calico.changed or net_netfilter_nf_conntrack_max.changed
+  
+  become: true
+  when: k8s.network_plugin == 'calico'
+  
 - name: attach the node to cluster
   command: sh /tmp/local-join-k8s-cluster.sh
   become: true
