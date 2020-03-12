@@ -176,7 +176,7 @@
       group: root
       mode: '0644'
       
-  - name: Copy docker daemon.json on server to /etc/docker
+  - name: Create networking exception for calico
     copy:
       dest:     /etc/NetworkManager/conf.d/calico.conf
       content:  |
