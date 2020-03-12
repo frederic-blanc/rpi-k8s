@@ -59,26 +59,54 @@
 - name: set ingress_certificate_base64_crt var
   set_fact: ingress_certificate_base64_crt="{{ base64_crt.stdout }}"
   
-- name: download latest ingress-nginx version
-  get_url:
-    url:  https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
-    dest: files/generated/k8s-ingress-nginx.yaml
-    force: true
-  delegate_to: localhost
-  
-- name: update ingress-nginx container image to arm version
-  replace:
-    path: files/generated/k8s-ingress-nginx.yaml
-    regexp:  'quay.io/kubernetes-ingress-controller/nginx-ingress-controller:'
-    replace: 'quay.io/kubernetes-ingress-controller/nginx-ingress-controller-arm:'
-  delegate_to: localhost
-  
-- name: update ingress-nginx (add certificate secret arg)
-  lineinfile:
-    path: files/generated/k8s-ingress-nginx.yaml
-    insertafter: '^            - /nginx-ingress-controller'
-    line: '            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate'
-  delegate_to: localhost
+- name: build nginx-ingress-controller deployment file
+  block:
+  - name: create temporary build directory
+    tempfile:
+      state:        directory
+      suffix:       build
+    register:       build_tmp_dir
+    delegate_to:    localhost
+    changed_when:   false
+    
+  - name: download latest ingress-nginx version
+    get_url:
+      url:          "https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml"
+      dest:         "{{ build_tmp_dir }}/k8s-ingress-nginx.yaml"
+      force:        true
+    delegate_to:    localhost
+    changed_when:   false
+    
+  - name: update ingress-nginx container image to arm version
+    replace:
+      path:         "{{ build_tmp_dir }}/k8s-ingress-nginx.yaml"
+      regexp:       "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:"
+      replace:      "quay.io/kubernetes-ingress-controller/nginx-ingress-controller-arm64:"
+    delegate_to:    localhost
+    changed_when:   false
+    
+  - name: update ingress-nginx (add certificate secret arg)
+    lineinfile:
+      path:         "{{ build_tmp_dir }}/k8s-ingress-nginx.yaml"
+      insertafter:  "^            - /nginx-ingress-controller"
+      line:         "            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate"
+    delegate_to:    localhost
+    changed_when:   false
+    
+  - name: Copy build file to files/generated
+    copy:
+      src           "{{ build_tmp_dir }}/k8s-ingress-nginx.yaml"
+      dest:         "files/generated"
+    delegate_to:    localhost
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:         "{{ build_tmp_dir.path }}"
+      state:        absent
+    when:           build_tmp_dir is defined
+    delegate_to:    localhost
+    changed_when:   false
   
 - name: Ensures /root/k8s dir exists on controller
   file: 
