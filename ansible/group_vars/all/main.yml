@@ -59,12 +59,14 @@ prompts:
   root: '\[\033[38;5;1m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;27m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
   
 k8s:
-  network_plugin: "flannel" # until weave issue on armhf is resolve
+  network_plugin: "calico"
+  calico:
+    cidr:       "192.168.0.0/16"
   
 ceph:
-  net_mask: '192.168.1.0/24'
-  cluster_name: 'ceph'
-  osd_drive: '/dev/sda'
+  net_mask:     "192.168.1.0/24"
+  cluster_name: "ceph"
+  osd_drive:    "/dev/sda"
   # Less     than   5 OSDs set pg_num to  128
   # Between  5 and 10 OSDs set pg_num to  512
   # Between 10 and 50 OSDs set pg_num to 4096
