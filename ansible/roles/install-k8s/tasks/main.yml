@@ -36,7 +36,7 @@
   become: true
   
 ## disable swap
-## seem to be already disable (docker install perhaps)
+## seem to be already disabled (by docker install perhaps) or not installed
 #- name: stop service dphys-swapfile
 #  systemd:
 #    state: stopped
@@ -86,10 +86,11 @@
   
 - name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
   sysctl:
-    name:  net.bridge.bridge-nf-call-iptables
-    value: "1"
-    state: present
-  register: bridge_nf_call_iptables
+    name:       net.bridge.bridge-nf-call-iptables
+    value:      "1"
+    state:      present
+    sysctl_set: yes
+  register:     bridge_nf_call_iptables
   become: true
   
 # reboot if needed
