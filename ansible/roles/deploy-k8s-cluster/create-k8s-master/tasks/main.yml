@@ -3,7 +3,6 @@
   file: 
       path:  files/generated
       state: directory
-  become: true
   delegate_to: localhost
   
 - name: Generate local private key (2048 bits, RSA)
@@ -176,6 +175,14 @@
       group: root
       mode: '0644'
       
+  - name: ensure /etc/NetworkManager/conf.d exists
+    file:
+      dest:       /etc/NetworkManager/conf.d
+      state:      directory
+      owner:      root
+      group:      root
+      mode:       '0755'
+    
   - name: Create networking exception for calico
     copy:
       dest:     /etc/NetworkManager/conf.d/calico.conf
@@ -187,7 +194,7 @@
       mode:       '0644'
     register:     networking_exception_for_calico
     
-  - name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
+  - name: set net.netfilter.nf_conntrack_max to 1000000
     sysctl:
       name:       net.netfilter.nf_conntrack_max
       value:      "1000000"
@@ -204,7 +211,7 @@
   - name: Initialize the Kubernetes cluster using kubeadm
     shell: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --node-name "{{ hostname }}" --cert-dir /etc/kubernetes/pki --pod-network-cidr="{{ k8s.calico.cidr }}"
     
-  - name: Install weave pod network
+  - name: Install calico pod network
     shell: kubectl apply -f '/root/k8s/k8s-calico.yaml' --kubeconfig /etc/kubernetes/admin.conf
     
   become: true

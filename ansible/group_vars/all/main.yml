@@ -59,7 +59,7 @@ prompts:
   root: '\[\033[38;5;1m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;27m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
   
 k8s:
-  network_plugin: "calico"
+  network_plugin: "flannel"
   calico:
     cidr:       "192.168.0.0/16"
   

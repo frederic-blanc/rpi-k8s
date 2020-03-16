@@ -119,10 +119,10 @@
   - wpa_supplicant
   become: true
   
-- name: ensure /boot/firmware/config.txt exist
+- name: ensure /boot/firmware/nobtcfg.txt exist
   copy:
     content: "[all]"
-    dest:  /boot/firmware/config.txt
+    dest:  /boot/firmware/nobtcfg.txt
     force: no
     owner: root
     group: root

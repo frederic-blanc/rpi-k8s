@@ -2,16 +2,16 @@
 - name: create k8s master
   hosts: master
   roles:
-  - create-k8s-master
+  - deploy-k8s-cluster/create-k8s-master
   
 - name: create k8s worker
   hosts: worker
   roles:
-  - create-k8s-worker
+  - deploy-k8s-cluster/create-k8s-worker
   
 - name: finalyze k8s cluster
   hosts: master
   roles:
-  - create-k8s-labels
-  - add-k8s-ingress-controller
-  - add-k8s-dashboard-ui
+  - deploy-k8s-cluster/create-k8s-labels
+  - deploy-k8s-cluster/add-k8s-ingress-controller
+  - deploy-k8s-cluster/add-k8s-dashboard-ui

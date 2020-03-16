@@ -115,6 +115,15 @@
   - docker status
   become: true
   
+- name: ensure service docker is started and enable
+  systemd:
+    name:    docker
+    state:   started
+    enabled: true
+  notify:
+  - docker status
+  become: true
+  
 # add docker group to work_users
 - name: add docker group to work_users
   user:

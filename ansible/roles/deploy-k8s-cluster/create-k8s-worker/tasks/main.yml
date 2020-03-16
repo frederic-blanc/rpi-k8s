@@ -33,7 +33,15 @@
   when: k8s.network_plugin == 'flannel'
   
 - name: kubernetes with calico  network plugin config
-  block:      
+  block:
+  - name: ensure /etc/NetworkManager/conf.d exists
+    file:
+      dest:       /etc/NetworkManager/conf.d
+      state:      directory
+      owner:      root
+      group:      root
+      mode:       '0755'
+    
   - name: Create networking exception for calico
     copy:
       dest:     /etc/NetworkManager/conf.d/calico.conf
@@ -75,6 +83,6 @@
 - name: Copy label node command to local file
   lineinfile:
     line: "kubectl label node {{ hostname }} node-role.kubernetes.io/worker=worker --overwrite"
-    path: files/generated/local-label-node-k8s-cluster.sh
+    path: "files/generated/{{ hostname }}-label-node-k8s-cluster.sh"
   delegate_to: localhost
   

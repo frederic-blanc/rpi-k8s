@@ -72,17 +72,18 @@
     - socat
   become: true
   
-- name: use __tables-legacy (needed for the network plugin to work on debian:buster)
-  alternatives:
-    name: "{{ item }}"
-    path: "/usr/sbin/{{ item }}-legacy"
-  with_items:
-  - "iptables"
-  - "ip6tables"
-  - "arptables"
-  - "ebtables"
-  register: __tables_legacy
-  become: true
+## after ubuntu 19.0X only
+#- name: use __tables-legacy (needed for the network plugin to work on debian:buster)
+#  alternatives:
+#    name: "{{ item }}"
+#    path: "/usr/sbin/{{ item }}-legacy"
+#  with_items:
+#  - "iptables"
+#  - "ip6tables"
+#  - "arptables"
+#  - "ebtables"
+#  register: __tables_legacy
+#  become: true
   
 - name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
   sysctl:
@@ -96,7 +97,7 @@
 # reboot if needed
 - name: reboot on change
   reboot:
-  when: __tables_legacy.changed or bridge_nf_call_iptables.changed
+  when: bridge_nf_call_iptables.changed
   become: true
   
 - name: Install Kubernetes binaries
@@ -131,6 +132,15 @@
     daemon_reload: yes
     name:  kubelet
   when: kubelet_default.changed
+  notify:
+  - kubelet status
+  become: true
+  
+- name: ensure service kubelet is started and enable
+  systemd:
+    name:    kubelet
+    state:   started
+    enabled: yes
   notify:
   - kubelet status
   become: true
