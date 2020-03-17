@@ -1,0 +1,13 @@
+- name: Update and upgrade apt packages
+  shell: |
+    timeout=$(($(date +%s) + 600))
+    while pgrep 'apt' > /dev/null; do
+        time=$(date +%s)
+        if [[ $time -ge $timeout ]]; then
+            exit 1
+        fi
+        sleep 1
+    done
+    exit 0
+  become: true
+  

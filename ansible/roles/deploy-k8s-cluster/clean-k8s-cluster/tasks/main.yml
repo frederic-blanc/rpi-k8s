@@ -1,0 +1,99 @@
+---
+# from here the role is not idempotent
+
+- name: Reset the Kubernetes cluster using kubeadm
+  shell:            "kubeadm reset -f"
+  become:           true
+  
+- name: clean from previous flannel installation
+  block:
+  - name: remove flannel cni file
+    file:
+      path:         "/etc/cni/net.d/10-flannel.conflist"
+      state:        absent
+    become:       true
+    
+  - name: get flannel interfaces
+    shell:          "ifconfig | grep '^{{ item }}:' | sed 's/:.*//'"
+    register:       ifconfig_result
+    with_items:
+    - "flannel.1"
+    - "cni0"
+    changed_when: false
+    become:       true
+    
+  - name: remove flannel interfaces
+    shell:        "ifconfig '{{ item }}' down"
+    with_items:   "{{ ifconfig_result.results | map(attribute='stdout_lines') | list | flatten }}"
+    register:     flannel_network_interfaces
+    become:       true
+  
+- name: clean from previous weave installation
+  block:
+  - name: remove weave cni file
+    file:
+      path:         "/etc/cni/net.d/10-weave.conflist"
+      state:        absent
+    become:       true
+    
+  - name: get weave interfaces
+    shell:          "ifconfig | grep '^{{ item }}:' | sed 's/:.*//'"
+    register:       ifconfig_result
+    with_items:
+    - "datapack"
+    - "vethwe-bridge"
+    - "vethwe-datapath"
+    - "vxlan-.*"
+    changed_when:   false
+    become:         true
+    
+  - name: remove weave interfaces
+    shell:          "ifconfig '{{ item }}' down"
+    with_items:     "{{ ifconfig_result.results | map(attribute='stdout_lines') | list | flatten }}"
+    register:       weave_network_interfaces
+    become:         true
+  
+- name: clean from previous calico installation
+  block:
+  - name: remove calico cni file
+    file:
+      path:         "/etc/cni/net.d/10-calico.conflist"
+      state:        absent
+    become:         true
+    
+  - name: remove kube calico cni plugin file
+    file:
+      path:         "/etc/cni/net.d/calico-kubeconfig"
+      state:        absent
+    become:         true
+    
+  - name: get calico interfaces
+    shell:          "ifconfig | grep '^{{ item }}:' | sed 's/:.*//'"
+    register:       ifconfig_result
+    with_items:
+    - "tunl0"
+    - "cali.*"
+    changed_when:   false
+    become:         true
+    
+  - name: remove calico interfaces
+    shell:          "ifconfig '{{ item }}' down"
+    with_items:     "{{ ifconfig_result.results | map(attribute='stdout_lines') | list | flatten }}"
+    register:       calico_network_interfaces
+    become:         true
+    
+  - name: remove calico network conf
+    file:
+      path:         "/etc/NetworkManager/conf.d/calico.conf"
+      state:        absent
+    when:           k8s.network_plugin  != 'calico'
+    register:       networkmanager_exception_for_calico
+    become:         true
+  
+- name: restart service networkd
+  systemd:
+    name:           systemd-networkd
+    state:          restarted
+  when:             flannel_network_interfaces.changed or weave_network_interfaces.changed or calico_network_interfaces.changed or networkmanager_exception_for_calico is defined and networkmanager_exception_for_calico.changed
+  become:           true
+  

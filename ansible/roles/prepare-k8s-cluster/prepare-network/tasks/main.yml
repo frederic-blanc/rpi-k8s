@@ -129,7 +129,7 @@
     mode:  '0644'
   become: true
   
-- name: add module bt and wifi toe disable list
+- name: add module bt and wifi to disable list
   blockinfile:
     path: /boot/firmware/nobtcfg.txt
     insertafter: "[all]"

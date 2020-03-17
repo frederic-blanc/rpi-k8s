@@ -1,63 +1,62 @@
 ---
 - name: Ensures files/generated dir exists on controller
   file: 
-      path:  files/generated
-      state: directory
-  become: true
-  delegate_to: localhost
+      path:         "files/generated"
+      state:        directory
+  delegate_to:      localhost
   
 #############################
 ##      Ingress NGINX      ##
 #############################
 - name: Generate local private key for ingress (2048 bits, RSA)
   openssl_privatekey:
-    path: "files/generated/{{ ingress_certificate.CN }}.key"
-    type: RSA
-    size: 2048
-  delegate_to: localhost
+    path:           "files/generated/{{ ingress_certificate.CN }}.key"
+    type:           RSA
+    size:           2048
+  delegate_to:      localhost
   
 - name: Generate local csr for ingress
   openssl_csr:
-    path: "files/generated/{{ ingress_certificate.CN }}.csr"
-    privatekey_path: files/generated/{{ ingress_certificate.CN }}.key
-    common_name: "{{ ingress_certificate.CN }}"
-    state_or_province_name: "{{ ingress_certificate.ST }}"
-    organization_name: "{{ ingress_certificate.O }}"
-    organizational_unit_name: "{{ ingress_certificate.OU }}"
-    useCommonNameForSAN: false
+    path:                       "files/generated/{{ ingress_certificate.CN }}.csr"
+    privatekey_path:            "files/generated/{{ ingress_certificate.CN }}.key"
+    common_name:                "{{ ingress_certificate.CN }}"
+    state_or_province_name:     "{{ ingress_certificate.ST }}"
+    organization_name:          "{{ ingress_certificate.O }}"
+    organizational_unit_name:   "{{ ingress_certificate.OU }}"
+    useCommonNameForSAN:        false
     basicConstraints:
     - CA:FALSE
     extended_key_usage:
     - serverAuth
-    subject_alt_name: "{{ ingress_certificate.SAN }}"
-  delegate_to: localhost
+    subject_alt_name:           "{{ ingress_certificate.SAN }}"
+  delegate_to:      localhost
   
 - name: Generate local certificate signed with own CA for ingress
   openssl_certificate:
-    path: "files/generated/{{ ingress_certificate.CN }}.crt"
-    csr_path: "files/generated/{{ ingress_certificate.CN }}.csr"
-    ownca_path: "files/generated/{{ domain_name }}.crt"
-    ownca_privatekey_path: "files/generated/{{ domain_name }}.key"
-    provider: ownca
-  delegate_to: localhost
+    path:                       "files/generated/{{ ingress_certificate.CN }}.crt"
+    csr_path:                   "files/generated/{{ ingress_certificate.CN }}.csr"
+    ownca_path:                 "files/generated/{{ domain_name }}.crt"
+    ownca_privatekey_path:      "files/generated/{{ domain_name }}.key"
+    provider:                   ownca
+  delegate_to:      localhost
   
 - name: get base64 of local key
-  shell: "cat files/generated/{{ ingress_certificate.CN }}.key | base64 -w0"
-  register: base64_key
-  delegate_to: localhost
-  changed_when: false
+  shell:            "cat files/generated/{{ ingress_certificate.CN }}.key | base64 -w0"
+  register:         base64_key
+  delegate_to:      localhost
+  changed_when:     false
   
 - name: set ingress_certificate_base64_key var
-  set_fact: ingress_certificate_base64_key="{{ base64_key.stdout }}"
+  set_fact:         ingress_certificate_base64_key="{{ base64_key.stdout }}"
   
 - name: get base64 of local certificate
-  shell: "cat files/generated/{{ ingress_certificate.CN }}.crt files/generated/{{ domain_name }}.crt | base64 -w0"
-  register: base64_crt
-  delegate_to: localhost
-  changed_when: false
+  shell:            "cat files/generated/{{ ingress_certificate.CN }}.crt files/generated/{{ domain_name }}.crt | base64 -w0"
+  register:         base64_crt
+  delegate_to:      localhost
+  changed_when:     false
   
 - name: set ingress_certificate_base64_crt var
-  set_fact: ingress_certificate_base64_crt="{{ base64_crt.stdout }}"
+  set_fact:         ingress_certificate_base64_crt="{{ base64_crt.stdout }}"
   
 - name: build nginx-ingress-controller deployment file
   block:
@@ -71,27 +70,27 @@
   - name: download latest ingress-nginx version
     get_url:
       url:          "https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml"
-      dest:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yaml"
+      dest:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
       force:        true
     changed_when:   false
     
   - name: update ingress-nginx container image to arm version
     replace:
-      path:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yaml"
+      path:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
       regexp:       "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:"
       replace:      "quay.io/kubernetes-ingress-controller/nginx-ingress-controller-arm64:"
     changed_when:   false
     
   - name: update ingress-nginx (add certificate secret arg)
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yaml"
+      path:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
       insertafter:  "^            - /nginx-ingress-controller"
       line:         "            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate"
     changed_when:   false
     
   - name: Copy build file to files/generated
     copy:
-      src:          "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yaml"
+      src:          "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
       dest:         "files/generated"
     
   always:
@@ -104,37 +103,43 @@
   
   delegate_to:      localhost
   
+- name: build ingress-nginx-ext file (service)
+  template:
+    src:            "k8s-ingress-nginx-ext.j2"
+    dest:           "files/generated/k8s-ingress-nginx-ext.yml"
+  delegate_to:      localhost
+  
 - name: Ensures /root/k8s dir exists on controller
   file: 
-      path:  /root/k8s
-      state: directory
-      owner: root
-      group: root
-      mode:  '0755'
+      path:         "/root/k8s"
+      state:        directory
+      owner:        root
+      group:        root
+      mode:         '0755'
   become: true
   
 - name: copy ingress-nginx file on host
   copy:
-    src:   files/generated/k8s-ingress-nginx.yaml
-    dest:  /root/k8s/k8s-ingress-nginx.yaml
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
+    src:            "files/generated/k8s-ingress-nginx.yml"
+    dest:           "/root/k8s/k8s-ingress-nginx.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
   
-- name: copy ingress-nginx ext file (service) on host
-  template:
-    src:   k8s-ingress-nginx-ext.j2
-    dest:  /root/k8s/k8s-ingress-nginx-ext.yaml
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
+- name: copy ingress-nginx-ext file on host
+  copy:
+    src:            "files/generated/k8s-ingress-nginx-ext.yml"
+    dest:           "/root/k8s/k8s-ingress-nginx-ext.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
   
 - name: apply ingress-nginx file
-  shell: kubectl apply -f '/root/k8s/k8s-ingress-nginx.yaml'
-  become: true
+  shell:            "kubectl apply -f '/root/k8s/k8s-ingress-nginx.yml'"
+  become:           true
   
 - name: apply ingress-nginx ext file
-  shell: kubectl apply -f '/root/k8s/k8s-ingress-nginx-ext.yaml'
-  become: true
+  shell:            "kubectl apply -f '/root/k8s/k8s-ingress-nginx-ext.yml'"
+  become:           true

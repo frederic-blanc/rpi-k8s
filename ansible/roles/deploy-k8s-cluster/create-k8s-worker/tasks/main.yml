@@ -1,88 +1,62 @@
 ---
-- name: Reset the Kubernetes cluster using kubeadm
-  command: kubeadm reset -f
-  become: true
-  
 - name: Ensures files/generated dir exists on controller
   file: 
-      path:  files/generated
-      state: directory
-  become: true
-  delegate_to: localhost
+      path:     "files/generated"
+      state:    directory
+  delegate_to:  localhost
   
 - name: Copy the join command to server location
   copy: 
-    src:  files/generated/local-join-k8s-cluster.sh
-    dest: /tmp/local-join-k8s-cluster.sh
-    mode: 0700
-  become: true
-  
-- name: kubernetes with flannel network plugin cleaning
-  block: 
-  - name: check if flannel interface exist
-    shell: ifconfig | grep 'flannel.1:'
-    register: flannel_interface
-    changed_when: false
-    failed_when: false
-    
-  - name: remove old flannel.1 interface
-    shell: ifconfig 'flannel.1' down
-    when: flannel_interface.rc == 0
-    
-  become: true
-  when: k8s.network_plugin == 'flannel'
+    src:        "files/generated/k8s-cluster-attach-self.sh"
+    dest:       "/tmp/k8s-cluster-attach-self.sh"
+    mode:       0700
+  become:       true
   
 - name: kubernetes with calico  network plugin config
   block:
   - name: ensure /etc/NetworkManager/conf.d exists
     file:
-      dest:       /etc/NetworkManager/conf.d
-      state:      directory
-      owner:      root
-      group:      root
-      mode:       '0755'
+      dest:     "/etc/NetworkManager/conf.d"
+      state:    directory
+      owner:    root
+      group:    root
+      mode:     '0755'
     
   - name: Create networking exception for calico
     copy:
-      dest:     /etc/NetworkManager/conf.d/calico.conf
+      dest:     "/etc/NetworkManager/conf.d/calico.conf"
       content:  |
         [keyfile]
         unmanaged-devices=interface-name:cali*;interface-name:tunl*
-      owner:      root
-      group:      root
-      mode:       '0644'
-    register:     networking_exception_for_calico
-    
-  - name: set net.bridge.bridge-nf-call-iptables to 1 (needed for both flannel and weave network plugin)
-    sysctl:
-      name:       net.netfilter.nf_conntrack_max
-      value:      "1000000"
-      state:      present
-      sysctl_set: yes
-    register:     net_netfilter_nf_conntrack_max
+      owner:    root
+      group:    root
+      mode:     '0644'
+    register:   networking_exception_for_calico
     
   - name: restart service networkd
     systemd:
-      state: restarted
-      name:  systemd-networkd
-    when: networking_exception_for_calico.changed or net_netfilter_nf_conntrack_max.changed
+      name:     systemd-networkd
+      state:    restarted
+    when:       networking_exception_for_calico.changed
   
   become: true
   when: k8s.network_plugin == 'calico'
   
 - name: attach the node to cluster
-  command: sh /tmp/local-join-k8s-cluster.sh
-  become: true
+  command:      "sh /tmp/k8s-cluster-attach-self.sh"
+  become:       true
   
 - name: delete join command file
   file: 
-    path: /tmp/local-join-k8s-cluster.sh
-    state: absent
-  become: true
+    path:       "/tmp/k8s-cluster-attach-self.sh"
+    state:      absent
+  become:       true
   
 - name: Copy label node command to local file
   lineinfile:
-    line: "kubectl label node {{ hostname }} node-role.kubernetes.io/worker=worker --overwrite"
-    path: "files/generated/{{ hostname }}-label-node-k8s-cluster.sh"
-  delegate_to: localhost
+    line:       "kubectl label node {{ hostname }} node-role.kubernetes.io/worker=worker --overwrite"
+    create:     yes
+    state:      present
+    path:       "files/generated/k8s-cluster-label-node-{{ hostname }}.sh"
+  delegate_to:  localhost
   

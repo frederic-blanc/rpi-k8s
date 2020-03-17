@@ -2,7 +2,7 @@
 - name: Find files/generated files with pattern "*-label-node-k8s-cluster.sh"
   find:
     paths:      "files/generated"
-    patterns:   "*-label-node-k8s-cluster.sh"
+    patterns:   "k8s-cluster-label-node-*.sh"
   register:     label_node_scripts
   delegate_to:  localhost
   
@@ -10,18 +10,20 @@
   block:
   - name: Copy the label node command to server location
     copy: 
-      src:      "{{ item }}"
-      dest:     "/tmp/local-label-node-k8s-cluster.sh"
-      mode: 0700
+      src:      "{{ item.path }}"
+      dest:     "/tmp/{{ item.path | basename }}"
+      mode:     0700
+    with_items: "{{ label_node_scripts.files }}"
     
   - name: set workers type
-    command:    "sh /tmp/local-label-node-k8s-cluster.sh"
+    command:    "sh /tmp/{{ item.path | basename }}"
+    with_items: "{{ label_node_scripts.files }}"
     
   - name: remove the label node command to server location
     file: 
-      path:     "/tmp/local-label-node-k8s-cluster.sh"
+      path:     "/tmp/{{ item.path | basename }}"
       state:    absent
-    
-  with_items:   "{{ label_node_scripts }}"
+    with_items: "{{ label_node_scripts.files }}"
+  
   become:       true
   
