@@ -143,6 +143,11 @@
     enabled:            true
   become:               true
   
+- name: enable mon enable-msgr2
+  shell:                "ceph mon enable-msgr2"
+  become:               true
+  become_user:          ceph
+  
 - name: create mgr
   block:
   - name: create mgr cluster folder

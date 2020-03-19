@@ -4,6 +4,10 @@ fsid                        = {{ ceph_uuid }}
 mon allow pool delete       = true
 mon initial members         = {{ hostname }}
 mon host                    = {{ ansible_eth0.ipv4.address }}
+
+ms bind msgr1               = true
+ms bind msgr2               = true
+
 public network              = {{ ceph.net_mask }}
 
 auth cluster required       = cephx
