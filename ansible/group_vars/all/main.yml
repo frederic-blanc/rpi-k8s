@@ -61,9 +61,9 @@ prompts:
 k8s:
   network_plugin:   "calico"
   flannel:
-    cidr:           "10.244.0.0/16"
+    cidr:           "10.244.0.0/16" # should not be changed
   calico:
-    cidr:           "10.0.0.0/16"
+    cidr:           "10.0.0.0/16"   # should not override your network ip address, e.g.: I use 192.168.1.0/24, then I cannot use the default documented value of 192.168.0.0/16
   
 ceph:
   net_mask:         "192.168.1.0/24"

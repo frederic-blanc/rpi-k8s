@@ -11,7 +11,7 @@
     file:
       path:         "/etc/cni/net.d/10-flannel.conflist"
       state:        absent
-    become:       true
+    become:         true
     
   - name: get flannel interfaces
     shell:          "ifconfig | grep '^{{ item }}:' | sed 's/:.*//'"
@@ -19,14 +19,14 @@
     with_items:
     - "flannel.1"
     - "cni0"
-    changed_when: false
-    become:       true
+    changed_when:   false
+    become:         true
     
   - name: remove flannel interfaces
-    shell:        "ifconfig '{{ item }}' down"
-    with_items:   "{{ ifconfig_result.results | map(attribute='stdout_lines') | list | flatten }}"
-    register:     flannel_network_interfaces
-    become:       true
+    shell:          "ifconfig '{{ item }}' down"
+    with_items:     "{{ ifconfig_result.results | map(attribute='stdout_lines') | list | flatten }}"
+    register:       flannel_network_interfaces
+    become:         true
   
 - name: clean from previous weave installation
   block:
@@ -34,7 +34,7 @@
     file:
       path:         "/etc/cni/net.d/10-weave.conflist"
       state:        absent
-    become:       true
+    become:         true
     
   - name: get weave interfaces
     shell:          "ifconfig | grep '^{{ item }}:' | sed 's/:.*//'"
@@ -95,5 +95,10 @@
     name:           systemd-networkd
     state:          restarted
   when:             flannel_network_interfaces.changed or weave_network_interfaces.changed or calico_network_interfaces.changed or networkmanager_exception_for_calico is defined and networkmanager_exception_for_calico.changed
+  become:           true
+  
+- name: reboot if needed
+  reboot:
+  when:             flannel_network_interfaces.changed and k8s.network_plugin  != 'flannel' or weave_network_interfaces.changed and k8s.network_plugin  != 'weave' or calico_network_interfaces.changed and k8s.network_plugin  != 'calico'
   become:           true
   

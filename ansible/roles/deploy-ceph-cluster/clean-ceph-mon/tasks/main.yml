@@ -1,0 +1,68 @@
+---
+- name: populate service facts
+  service_facts:
+  no_log:           true
+  
+- name: ensure ceph base binaries is installed
+  apt: 
+    name:           "{{ packages }}"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
+  vars:
+    packages:
+    - "ceph-base"
+    - "ceph-common"
+  become:           true
+  
+- name: stop and disable service osd if exist
+  systemd:
+    name:           "{{ item }}"
+    state:          stopped
+    enabled:        false
+  when:             item in services.keys()
+  with_items:
+  - "ceph-mon@{{ hostname }}.service"
+  - "ceph-mgr@{{ hostname }}.service"
+  - "ceph-mds@{{ hostname }}.service"
+  become:           true
+  
+## remove ceph packages
+- name: remove ceph mon packages and their dependencies
+  apt: 
+    name:           "{{ packages }}"
+    state:          absent
+    force_apt_get:  yes
+    purge:          yes
+  vars:
+    packages:
+    - ceph-mon
+    - ceph-mgr
+    - ceph-mds
+  become: true
+  
+- name: remove /var/lib/ceph/mon
+  file:
+    path:           "/var/lib/ceph/mon"
+    state:          absent
+  become:           true
+  
+- name: find all ceph files
+  find:
+    paths:          "{{ item }}"
+    file_type:      file
+  with_items:
+  - "/run/ceph"
+  - "/var/lib/ceph"
+  - "/etc/ceph"
+  register:         ceph_files
+  become:           true
+  
+- name: delete all ceph files
+  file:
+    path:           "{{ item.path }}"
+    state:          absent
+  with_items:       "{{ ceph_files.results | map(attribute='files') | list | flatten }}"
+  become:           true
+  

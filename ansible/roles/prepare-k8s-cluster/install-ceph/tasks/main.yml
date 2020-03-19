@@ -1,0 +1,66 @@
+---
+- name: Install package to manage access to https repositories
+  apt:
+    name:           "{{ packages }}"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
+  vars:
+    packages:
+    - apt-transport-https
+    - ca-certificates
+    - gnupg-agent
+    - software-properties-common
+  become: true
+  
+- name: Add an apt signing key for ceph repository
+  apt_key:
+    url:            "https://download.ceph.com/keys/release.asc"
+    state:          present
+  become:           true
+  
+- name: Adding apt repository for Kubernetes
+  apt_repository:
+    repo:           "deb https://download.ceph.com/{{ ceph.repository.dist }}/ {{ ceph.repository.version }} {{ ceph.repository.channel }}"
+    filename:       "ceph.list"
+    state:          present
+  become:           true
+  
+- name: Install ceph dependencies
+  apt: 
+    name:           "{{ packages }}"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
+  vars:
+    packages:
+    - "libcurl3"
+  become:           true
+  
+- name: Install ceph binaries
+  apt: 
+    name:           "{{ packages }}"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
+  vars:
+    packages:
+    - "ceph-base"
+    - "ceph-common"
+  become:           true
+  
+- name: create ceph folders
+  file:
+    path:           "{{ item }}"
+    owner:          ceph
+    group:          ceph
+    mode:           '0755'
+    state:          directory
+  with_items:
+  - /var/run/ceph
+  - /etc/ceph
+  become: true
+  

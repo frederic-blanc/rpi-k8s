@@ -12,6 +12,7 @@
   - prepare-k8s-cluster/prepare-users
   - prepare-k8s-cluster/install-docker
   - prepare-k8s-cluster/install-k8s
+  - prepare-k8s-cluster/install-ceph
   
 - name: lock ubuntu account
   hosts: all

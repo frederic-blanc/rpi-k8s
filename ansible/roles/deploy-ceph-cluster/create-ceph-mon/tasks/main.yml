@@ -1,211 +1,212 @@
 ---
-# first we clean 
-
-## stop and disable ceph services if exist
-- name: stop and disable service mon if exist
-  systemd:
-    name: "{{ item }}"
-    state: stopped
-    enabled: false
-  with_items:
-  - "ceph-mon@{{ hostname }}"
-  - "ceph-mgr@{{ hostname }}"
-  - "ceph-mds@{{ hostname }}"
-  failed_when: false
-  become: true
-  
-## remove ceph packages
-- name: remove ceph mon packages and their dependencies
-  apt: 
-    name: "{{ packages }}"
-    state: absent
-    autoremove: yes
-    force_apt_get: yes
-    purge: yes
-  vars:
-    packages:
-    - ceph-mon
-    - ceph-mgr
-    - ceph-mds
-  become: true
-  
-## remove ceph folders
-- name: Remove ceph folders
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items:
-  - /run/ceph
-  - /var/lib/ceph
-  - /etc/ceph
-  become: true
-  
-# then we can install ceph mon services
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:             "files/generated"
+      state:            directory
+  delegate_to:          localhost
   
 - name: Update and upgrade apt packages
   apt:
-    upgrade: dist
-    update_cache: yes
-    force_apt_get: yes
-  become: true
+    upgrade:            dist
+    update_cache:       yes
+    force_apt_get:      yes
+  become:               true
   
 - name: install ceph mon packages and their dependencies
   apt: 
-    name: "{{ packages }}"
-    state: present
-    autoremove: yes
-    force_apt_get: yes
+    name:               "{{ packages }}"
+    state:              present
+    autoremove:         yes
+    force_apt_get:      yes
     install_recommends: no
   vars:
     packages:
-    - ceph-mon
-    - ceph-mgr
-    - ceph-mds
-  become: true
+    - "ceph-mon"
+    - "ceph-mgr"
+    - "ceph-mds"
+  become:               true
   
-- name: Generate ceph uuid
-  command:  uuidgen
-  register: uuidgen_command
-  become: true
+- name: assigne the correct user recursively to ceph folders
+  file:
+    path:               "{{ item }}"
+    state:              directory
+    owner:              ceph
+    group:              ceph
+    recurse:            yes
+  with_items:
+  - "/var/lib/ceph"
+  - "/etc/ceph"
+  become:               true
   
 - name: set_fact uuid from uuidgen_command
   set_fact:
-    ceph_uuid: "{{ uuidgen_command.stdout_lines[0] }}" 
+    ceph_uuid:          "{{ 9999999999999999999999 | random | to_uuid }}"
   
 - name: Generate ceph.conf on local
   template:
-    src:   ceph.j2
-    dest:  files/generated/ceph.conf
-  delegate_to: localhost
-  
-- name: create ceph folders
-  file:
-    path:  "{{ item }}"
-    owner: ceph
-    group: ceph
-    mode: '0755'
-    state: directory
-  with_items:
-  - /var/run/ceph
-  - /etc/ceph
-  become: true
+    src:                "ceph.j2"
+    dest:               "files/generated/ceph.conf"
+  delegate_to:          localhost
   
 - name: copy ceph conf file on host
   copy:
-    src:   files/generated/ceph.conf
-    dest:  /etc/ceph/ceph.conf
-    owner: ceph
-    group: ceph
-    mode: '0644'
-  become: true
-  
-- name: generate ceph.client.admin.keyring
-  shell: "{{ item }}"
-  args:
-    warn: false
-  with_items:
-  - "rm -f /tmp/ceph.mon.keyring"
-  - "ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'"
-  - "chown ceph:ceph /tmp/ceph.mon.keyring"
-  - "ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring --gen-key -n client.admin --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow *' --cap mgr 'allow *'"
-  - "ceph-authtool --create-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring --gen-key -n client.bootstrap-osd --cap mon 'profile bootstrap-osd' --cap mgr 'allow r'"
-  - "ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring"
-  - "ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring"
-  become: true
-  
-- name: copy ceph.bootstrap-osd.keyring to local
-  fetch:
-    src:  /var/lib/ceph/bootstrap-osd/ceph.keyring
-    dest: files/generated/ceph.bootstrap-osd.keyring
-    flat: yes
-  become: true
-  
-- name: copy ceph.client.admin.keyring to local
-  fetch:
-    src:  /etc/ceph/ceph.client.admin.keyring
-    dest: files/generated/ceph.client.admin.keyring
-    flat: yes
-  become: true
-  
-# install ceph mon
-- name: init ceph mon
-  shell: "{{ item }}"
-  args:
-    warn: false
-  with_items:
-  - "rm -f /tmp/monmap"
-  - "monmaptool --create --add {{ hostname }} {{ ansible_eth0.ipv4.address }} --fsid {{ ceph_uuid }} /tmp/monmap"
-  - "mkdir --mode=755 /var/lib/ceph/mon/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "chown -R ceph:ceph /var/lib/ceph/mon/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "sudo -u ceph ceph-mon --cluster {{ ceph.cluster_name }} --mkfs -i {{ hostname }} --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring"
-  - "rm -f /tmp/monmap"
-  become: true
-  
-- name: Clean tmp keyring
-  file:
-    path: /tmp/ceph.mon.keyring
-    state: absent
-  become: true
+    src:                "files/generated/ceph.conf"
+    dest:               "/etc/ceph/ceph.conf"
+    owner:              ceph
+    group:              ceph
+    mode:               '0644'
+  become:               true
   
 - name: add CLUSTER directive to ceph services env
   lineinfile:
-    path:  /etc/default/ceph
-    line: "CLUSTER={{ ceph.cluster_name }}"
-    state: present
-    create: yes
-  become: true
+    path:               "/etc/default/ceph"
+    line:               "CLUSTER={{ ceph.cluster_name }}"
+    state:              present
+    create:             yes
+    owner:              ceph
+    group:              ceph
+    mode:               '0644'
+  become:               true
+  
+- name: create mon
+  block:
+  - name: create temporary build directory
+    tempfile:
+      state:            directory
+      suffix:           ".ceph"
+    register:           ceph_tmp_dir
+    changed_when:       false
+    
+  - name: init ceph.mon.keyring
+    shell:              "ceph-authtool --create-keyring '{{ ceph_tmp_dir.path }}/ceph.mon.keyring'  --gen-key -n mon.                   --cap mon 'allow *'"
+    
+  - name: delete client admin keyring
+    file:
+      path:             "/etc/ceph/ceph.client.admin.keyring"
+      state:            absent
+    
+  - name: bootstrap-osd ceph keyring
+    file:
+      path:             "/var/lib/ceph/bootstrap-osd/ceph.keyring"
+      state:            absent
+    
+  - name: create ceph client admin keyring
+    shell:              "ceph-authtool --create-keyring '/etc/ceph/ceph.client.admin.keyring'       --gen-key -n client.admin           --cap mon 'allow *'     --cap mgr 'allow *' --cap mds 'allow *' --cap osd 'allow *'"
+    
+  - name: create bootstrap-osd ceph keyring
+    shell:              "ceph-authtool --create-keyring '/var/lib/ceph/bootstrap-osd/ceph.keyring'  --gen-key -n client.bootstrap-osd   --cap mon 'profile bootstrap-osd'"
+    
+  - name: import ceph.mon.keyring to ceph.client.admin.keyring
+    shell:              "ceph-authtool '{{ ceph_tmp_dir.path }}/ceph.mon.keyring' --import-keyring '/etc/ceph/ceph.client.admin.keyring'"
+    
+  - name: import ceph.mon.keyring to bootstrap-osd ceph.keyring
+    shell:              "ceph-authtool '{{ ceph_tmp_dir.path }}/ceph.mon.keyring' --import-keyring '/var/lib/ceph/bootstrap-osd/ceph.keyring'"
+    
+  - name: copy ceph.client.admin.keyring to local
+    fetch:
+      src:              "/etc/ceph/ceph.client.admin.keyring"
+      dest:             "files/generated/ceph.client.admin.keyring"
+      flat:             yes
+    
+  - name: copy ceph.bootstrap-osd.keyring to local
+    fetch:
+      src:              "/var/lib/ceph/bootstrap-osd/ceph.keyring"
+      dest:             "files/generated/ceph.bootstrap-osd.keyring"
+      flat:             yes
+    
+  - name: init monmap
+    shell:              "monmaptool --create --add '{{ hostname }}' '{{ ansible_eth0.ipv4.address }}' --fsid '{{ ceph_uuid }}' '{{ ceph_tmp_dir.path }}/monmap'"
+    
+  - name: ensure mon cluster folder is absent
+    file:
+      path:             "/var/lib/ceph/mon/{{ ceph.cluster_name }}-{{ hostname }}"
+      state:            absent
+    
+  - name: populate monmap
+    shell:              "ceph-mon --cluster '{{ ceph.cluster_name }}' --mkfs -i '{{ hostname }}' --monmap '{{ ceph_tmp_dir.path }}/monmap' --keyring '{{ ceph_tmp_dir.path }}/ceph.mon.keyring'"
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:             "{{ ceph_tmp_dir.path }}"
+      state:            absent
+    when:               ceph_tmp_dir is defined
+    changed_when:       false
+    
+  become:               true
+  become_user:          ceph
   
 - name: start and enable ceph mon service
   systemd:
-    name: "ceph-mon@{{ hostname }}"
-    state: started
-    enabled: true
-  become: true
+    name:               "ceph-mon@{{ hostname }}"
+    state:              started
+    enabled:            true
+  become:               true
   
-# install ceph mgr
-- name: init ceph mgr
-  shell: "{{ item }}"
-  args:
-    warn: false
-  with_items:
-  - "mkdir --mode=755 /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "chown -R ceph:ceph /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "ceph auth get-or-create mgr.{{ hostname }} mon 'allow profile mgr' osd 'allow *' mds 'allow *' > /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
-  - "chown ceph:ceph /var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
-  become: true
+- name: create mgr
+  block:
+  - name: create mgr cluster folder
+    file:
+      path:             "/var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}"
+      state:            directory
+      owner:            ceph
+      group:            ceph
+      mode:             '0755'
+    
+  - name: delete mgr previouskeyring
+    file:
+      path:             "/var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+      state:            absent
+    
+  - name: create mgr keyring
+    shell:              "ceph auth get-or-create mgr.{{ hostname }} mon 'allow profile mgr' osd 'allow *' mds 'allow *' > '/var/lib/ceph/mgr/{{ ceph.cluster_name }}-{{ hostname }}/keyring'"
+    
+  become:               true
+  become_user:          ceph
   
 - name: start and enable ceph mgr service
   systemd:
-    name: "ceph-mgr@{{ hostname }}"
-    state: started
-    enabled: true
-  become: true
+    name:               "ceph-mgr@{{ hostname }}"
+    state:              started
+    enabled:            true
+  become:               true
   
-# install ceph mds
-- name: init ceph mds
-  shell: "{{ item }}"
-  args:
-    warn: false
-  with_items:
-  - "mkdir --mode=755 /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "chown -R ceph:ceph /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}"
-  - "ceph-authtool --create-keyring /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring --gen-key -n mds.{{ hostname }}"
-  - "ceph auth add mds.{{ hostname }} osd 'allow rwx' mds 'allow' mon 'allow profile mds' -i /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
-  - "chown ceph:ceph /var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
-  become: true
+- name: create mds
+  block:
+  - name: create mon cluster folder is absent
+    file:
+      path:             "/var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}"
+      state:            directory
+      owner:            ceph
+      group:            ceph
+      mode:             '0755'
+    
+  - name: delete mgr keyring
+    file:
+      path:             "/var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring"
+      state:            absent
+    
+  - name: create mgr keyring
+    shell:              "ceph-authtool --create-keyring '/var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring' --gen-key -n mds.{{ hostname }}"
+    
+  - name: init ceph mgr
+    shell:              "ceph auth add mds.{{ hostname }} osd 'allow rwx' mds 'allow' mon 'allow profile mds' -i '/var/lib/ceph/mds/{{ ceph.cluster_name }}-{{ hostname }}/keyring'"
+    
+  become:               true
+  become_user:          ceph
   
 - name: correct ceph mds service file
   replace:
-    path: /lib/systemd/system/ceph-mds@.service
-    regexp: '^ExecStart=(.*) --setuser ceph --setgroup ceph$'
-    replace: 'ExecStart=\1 --setuser ceph --setgroup ceph -m %i:6789'
+    path:               "/lib/systemd/system/ceph-mds@.service"
+    regexp:             '^ExecStart=(.*) --setuser ceph --setgroup ceph$'
+    replace:            'ExecStart=\1 --setuser ceph --setgroup ceph -m %i:6789'
   become: true
   
 - name: start and enable ceph mds service
   systemd:
-    name: "ceph-mds@{{ hostname }}"
-    state: started
-    daemon_reload: yes
-    enabled: true
-  become: true
+    name:               "ceph-mds@{{ hostname }}"
+    state:              started
+    daemon_reload:      yes
+    enabled:            true
+  become:               true
   

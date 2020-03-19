@@ -1,4 +1,4 @@
-- name: Update and upgrade apt packages
+- name: Wait for the end of the first boot apt
   shell: |
     timeout=$(($(date +%s) + 600))
     while pgrep 'apt' > /dev/null; do
@@ -9,5 +9,5 @@
         sleep 1
     done
     exit 0
-  become: true
+  changed_when: false
   

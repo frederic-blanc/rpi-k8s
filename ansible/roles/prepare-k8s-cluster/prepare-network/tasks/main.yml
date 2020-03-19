@@ -112,11 +112,11 @@
 # disable wifi and bluetooth
 - name: stop and disable services
   systemd:
-    name: cron
-    state: stopped
-    enabled: false
+    name:       "{{ item }}"
+    state:      stopped
+    enabled:    false
   with_items:
-  - wpa_supplicant
+  - "wpa_supplicant.service"
   become: true
   
 - name: ensure /boot/firmware/nobtcfg.txt exist

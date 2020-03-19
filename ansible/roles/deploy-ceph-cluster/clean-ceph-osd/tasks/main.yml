@@ -1,0 +1,78 @@
+---
+- name: populate service facts
+  service_facts:
+  no_log:           true
+  
+- name: ensure ceph base binaries is installed
+  apt: 
+    name:           "{{ packages }}"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
+  vars:
+    packages:
+    - "ceph-base"
+    - "ceph-common"
+    - "lvm2"
+  become:           true
+  
+- name: stop and disable service osd if exist
+  systemd:
+    name:           "{{ item }}"
+    state:          stopped
+    enabled:        false
+  with_items:       "{{ services.keys() | select( 'match', '^ceph-osd@[0-9]+\\.service' ) | list }}"
+  become:           true
+  
+## remove ceph packages
+- name: remove ceph osd packages and their dependencies
+  apt: 
+    name:           "{{ packages }}"
+    state:          absent
+    force_apt_get:  yes
+    purge:          yes
+  vars:
+    packages:
+    - "ceph-osd"
+  become:           true
+  
+- name: Unmount ceph osd folders
+  mount:
+    path:           "{{ item }}"
+    state:          unmounted
+  with_items:       "{{ ansible_mounts | map(attribute='mount') | select( 'match', '^/var/lib/ceph/osd/.*' ) | list }}"
+  become:           true
+  
+- name: retrieve all vgs
+  shell:            "vgs --noheadings --options vg_name"
+  register:         vgs_command
+  changed_when:     false
+  become:           true
+  
+- name: Remove ceph volume group
+  lvg:
+    vg:             "{{ item }}"
+    state:          absent
+    force:          yes
+  with_items:       "{{ vgs_command.stdout_lines |  map('trim') | select( 'match', '^ceph-.*' ) | list }}"
+  become:           true
+  
+- name: find all ceph files
+  find:
+    paths:          "{{ item }}"
+    file_type:      file
+  with_items:
+  - "/run/ceph"
+  - "/var/lib/ceph"
+  - "/etc/ceph"
+  register:         ceph_files
+  become:           true
+  
+- name: delete all ceph files
+  file:
+    path:           "{{ item.path }}"
+    state:          absent
+  with_items:       "{{ ceph_files.results | map(attribute='files') | list | flatten }}"
+  become:           true
+  

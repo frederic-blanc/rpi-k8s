@@ -1,10 +1,18 @@
 ---
+- name: clean ceph mon
+  hosts: master
+  roles:
+  - deploy-ceph-cluster/clean-ceph-mon
+- name: clean ceph osd
+  hosts: worker
+  roles:
+  - deploy-ceph-cluster/clean-ceph-osd
+  
 - name: create ceph mon
   hosts: master
   roles:
   - deploy-ceph-cluster/create-ceph-mon
-  
-- name: create ceph mon
+- name: create ceph osd
   hosts: worker
   roles:
   - deploy-ceph-cluster/create-ceph-osd

@@ -1,206 +1,106 @@
 ---
-# first we clean 
-- name: populate service facts
-  service_facts:
-
-- name: stop and disable service mon if exist
-  systemd:
-    name: "{{ item }}"
-    state: stopped
-    enabled: false
-  when: item is regex('^ceph-osd@[0-9]+\.service$')
-  with_items: "{{ services }}"
-  become: true
-  
-## remove ceph packages
-- name: remove ceph osd and lvm2 packages and their dependencies
-  apt: 
-    name: "{{ packages }}"
-    state: absent
-    autoremove: yes
-    force_apt_get: yes
-    purge: yes
-  vars:
-    packages:
-    - ceph-osd
-    - lvm2
-  become: true
-  
-- name: get ceph osd mount point
-  shell: mount  | sed -n 's|^tmpfs on \(/var/lib/ceph/osd/.*\) type .*$|\1|p'
-  args:
-    warn: false
-  register: CEPH_FS_command
-  changed_when: false
-  become: true
-  
-- name: Unmount ceph osd folders
-  mount:
-    path: "{{ item }}"
-    state: unmounted
-  with_items: "{{ CEPH_FS_command.stdout_lines }}"
-  become: true
-  
-- name: re-add lvm2 package and its dependencies
-  apt: 
-    name: "lvm2"
-    state: present
-    force_apt_get: yes
-  become: true
-  
-- name: get ceph volume group
-  shell: vgdisplay | sed -n 's/^[[:space:]]*VG Name[[:space:]]\+\(ceph-.*\)$/\1/p'
-  register: CEPH_VG_command
-  changed_when: false
-  become: true
-  
-- name: Remove ceph volume group
-  lvg:
-    vg: "{{ item }}"
-    state: absent
-    force: yes
-  with_items: "{{ CEPH_VG_command.stdout_lines }}"
-  become: true
-  
-## remove ceph folders
-- name: Remove ceph and lvm folders
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items:
-  - /run/ceph
-  - /var/lib/ceph
-  - /etc/ceph
-  - /etc/lvm
-  become: true
-  
-- name: Remove ceph osd service file
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items:
-  - /run/systemd/system/ceph-osd.target.wants
-  - /etc/systemd/system/ceph-osd.target.wants
-  become: true
-  
-- name: get ceph osd wants files
-  shell: ls /etc/systemd/system/multi-user.target.wants/ceph*
-  args:
-    warn: false
-  register: ceph_osd_wants_files_command
-  changed_when: false
-  become: true
-  
-- name: Remove ceph osd wants file
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items: "{{ ceph_osd_wants_files_command.stdout_lines }}"
-  become: true
-  
-# then we can install ceph osd service
-  
 - name: Update and upgrade apt packages
   apt:
-    upgrade: dist
-    update_cache: yes
-    force_apt_get: yes
-  become: true
+    upgrade:            dist
+    update_cache:       yes
+    force_apt_get:      yes
+  become:               true
   
-- name: install ceph osd packages and its dependencies
+- name: install ceph osd packages and their dependencies
   apt: 
-    name: "ceph-osd"
-    state: present
-    autoremove: yes
-    force_apt_get: yes
+    name:               "{{ packages }}"
+    state:              present
+    autoremove:         yes
+    force_apt_get:      yes
     install_recommends: no
-  become: true
+  vars:
+    packages:
+    - "ceph-osd"
+  become:               true
   
-- name: create ceph folders
+- name: assigne the correct user recursively to ceph folders
   file:
-    path:  "{{ item }}"
-    owner: ceph
-    group: ceph
-    mode: '0755'
-    state: directory
+    path:               "{{ item }}"
+    state:              directory
+    owner:              ceph
+    group:              ceph
+    recurse:            yes
   with_items:
-  - /var/run/ceph
-  - /etc/ceph
-  become: true
+  - "/var/lib/ceph"
+  - "/etc/ceph"
+  become:               true
   
 - name: copy ceph conf file on host
   copy:
-    src:   files/generated/ceph.conf
-    dest:  /etc/ceph/ceph.conf
-    owner: ceph
-    group: ceph
-    mode: '0644'
-  become: true
+    src:                "files/generated/ceph.conf"
+    dest:               "/etc/ceph/ceph.conf"
+    owner:              ceph
+    group:              ceph
+    mode:               '0644'
+  become:               true
   
 - name: copy ceph admin keyring file on host
   copy:
-    src:   files/generated/ceph.client.admin.keyring
-    dest:  /etc/ceph/ceph.client.admin.keyring
-    owner: ceph
-    group: ceph
-    mode: '0600'
-  become: true
+    src:                "files/generated/ceph.client.admin.keyring"
+    dest:               "/etc/ceph/ceph.client.admin.keyring"
+    owner:              ceph
+    group:              ceph
+    mode:               '0600'
+  become:               true
   
 - name: copy ceph bootstrap-osd keyring file on host
   copy:
-    src:   files/generated/ceph.bootstrap-osd.keyring
-    dest:  /var/lib/ceph/bootstrap-osd/ceph.keyring
-    owner: ceph
-    group: ceph
-    mode: '0600'
-  become: true
+    src:                "files/generated/ceph.bootstrap-osd.keyring"
+    dest:               "/var/lib/ceph/bootstrap-osd/ceph.keyring"
+    owner:              ceph
+    group:              ceph
+    mode:               '0600'
+  become:               true
   
 # create {{ ceph.osd_drive }}1 logical volume
-- name: prepare logical volume
-  shell: "{{ item }}"
-  args:
-    warn: false
-  with_items:
-  - "wipefs --all --force  {{ ceph.osd_drive }}"
-  - "dd if=/dev/zero of={{ ceph.osd_drive }} bs=1M bs=446 count=1"
-  - "echo '2048,,,' | sfdisk {{ ceph.osd_drive }}"
+- name: create osd logical volume and volume group
+  block:
+  - name: wipe drive
+    shell:              "wipefs --all --force  {{ ceph.osd_drive }}"
+    
+  - name: make sure that first octets are clean
+    shell:              "dd if=/dev/zero    of={{ ceph.osd_drive }} bs=1M bs=446 count=1"
+    
+  - name: create primary partition
+    shell:              "echo '2048,,,' | sfdisk {{ ceph.osd_drive }}"
+  
+  - name: Create a ceph unique volume group (bug in ceph-volume, when it not exists)
+    lvg:
+      vg:               "ceph-{{ 9999999999999999999999 | random | to_uuid }}"
+      pvs:              "{{ ceph.osd_drive }}1"
+      
   become: true
   
 - name: create ceph volume
-  shell: "ceph-volume lvm prepare --data {{ ceph.osd_drive }}1"
-  args:
-    warn: false
-  become: true
+  shell:                "ceph-volume lvm prepare --data {{ ceph.osd_drive }}1"
+  become:               true
   
-- name: get ceph volume ID
-  shell: ceph-volume lvm list | sed -n 's/^[[:space:]]\+osd id[[:space:]]\+\([0-9]\+\)$/\1/p'
-  register: LVM_ID_command
-  become: true
+- name: execute ceph volume data command
+  shell:                "ceph-volume lvm list --format json"
+  register:             ceph_volumes_command
+  changed_when:         false
+  become:               true
   
-- name: set_fact for ceph volume ID
+- name: set_fact ceph_volumes
   set_fact:
-    LVM_ID: "{{ LVM_ID_command.stdout_lines[0] }}"
-  
-- name: get ceph volume FSID
-  shell: ceph-volume lvm list | sed -n 's/^[[:space:]]\+osd fsid[[:space:]]\+\([0-9a-f-]\+\)$/\1/p'
-  register: LVM_FSID_command
-  become: true
-  
-- name: set_fact for ceph volume FSID
-  set_fact:
-    LVM_FSID: "{{ LVM_FSID_command.stdout_lines[0] }}"
+    ceph_volumes:       "{{ (ceph_volumes_command.stdout | from_json).values() | flatten | map(attribute='tags') | flatten | list }}"
   
 - name: activate ceph volume
-  shell: "ceph-volume lvm activate {{ LVM_ID }} {{ LVM_FSID }}"
-  args:
-    warn: false
-  become: true
+  shell:                "ceph-volume lvm activate {{ item['ceph.osd_id'] }} {{ item['ceph.osd_fsid'] }}"
+  with_items:           "{{ ceph_volumes }}"
+  become:               true
   
 - name: restart and enable ceph osd service
   systemd:
-    name: "ceph-osd@{{ LVM_ID }}"
-    state: restarted
-    daemon_reload: yes
-    enabled: true
-  become: true
+    name:               "ceph-osd@{{ item['ceph.osd_id'] }}"
+    state:              restarted
+    daemon_reload:      yes
+    enabled:            true
+  with_items:           "{{ ceph_volumes }}"
+  become:               true
   
