@@ -52,15 +52,21 @@
     - "ceph-common"
   become:           true
   
-- name: create ceph folders
+- name: create /etc/ceph folders
   file:
-    path:           "{{ item }}"
+    path:           "/etc/ceph"
     owner:          ceph
     group:          ceph
     mode:           '0755'
     state:          directory
-  with_items:
-  - /var/run/ceph
-  - /etc/ceph
-  become: true
+  become:           true
+  
+- name: create /etc/ceph folders
+  file:
+    path:           "/var/run/ceph"
+    owner:          ceph
+    group:          ceph
+    mode:           '0770'
+    state:          directory
+  become:           true
   
