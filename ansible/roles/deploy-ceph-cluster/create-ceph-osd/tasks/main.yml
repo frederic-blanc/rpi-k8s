@@ -68,12 +68,17 @@
     
   - name: create primary partition
     shell:              "echo '2048,,,' | sfdisk {{ ceph.osd_drive }}"
+    
+  become: true
   
-  - name: Create a ceph unique volume group (bug in ceph-volume, when it not exists)
-    lvg:
-      vg:               "ceph-{{ 9999999999999999999999 | random | to_uuid }}"
-      pvs:              "{{ ceph.osd_drive }}1"
-      
+- name: set_fact uniq ceph vg name
+  set_fact:
+    ceph_vgname:        "ceph-{{ 9999999999999999999999 | random | to_uuid }}"
+    
+- name: Create a ceph unique volume group (bug in ceph-volume, when it not exists)
+  lvg:
+    vg:                 "{{ ceph_vgname }}"
+    pvs:                "{{ ceph.osd_drive }}1"
   become: true
   
 - name: create ceph volume

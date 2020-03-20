@@ -82,4 +82,6 @@ ceph:
     user: kube
 #   pg_num:  128
 #   pgp_num: 128
-  
+
+docker_registry:
+  size: 10Gi

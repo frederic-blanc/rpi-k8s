@@ -1,0 +1,11 @@
+---
+- name: deploy certificate authorities key on all nodes
+  hosts: all
+  roles:
+  - deploy-docker-registry/deploy-registry-certificate
+  
+- name: deploy docker registry on k8s
+  hosts: master
+  roles:
+  - deploy-docker-registry/add-docker-registry
+  

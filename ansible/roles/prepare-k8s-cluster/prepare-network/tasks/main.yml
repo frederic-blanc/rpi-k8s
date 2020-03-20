@@ -29,21 +29,21 @@
   
 - name: comment ipv6 hosts lines
   replace: 
-    path:   /etc/hosts
-    regexp: '^((?!#).*::[0-9].*)$'
-    replace: '#\1'
-  become: true
+    path:       "/etc/hosts"
+    regexp:     '^((?!#).*::[0-9].*)$'
+    replace:    '#\1'
+  become:        true
   
 # set hostname and FQDN
 - name: set hostname
   hostname:
-    name: "{{ hostname }}"
-  become: true
+    name:       "{{ hostname }}"
+  become:       true
   
 - name: add hotname and fqdn to /etc/hosts
   blockinfile:
-    path: /etc/hosts
-    block: |
+    path:       "/etc/hosts"
+    block:      |
       127.0.1.1       {{ fqdn }} {{ hostname }}
       {{ ansible_eth0.ipv4.address }}    {{ fqdn }} {{ hostname }}
   become: true
@@ -51,32 +51,86 @@
 # set static IP
 - name: install netplan config file
   template:
-    src:    50-eth0-ansible.yaml.j2
-    dest:   /etc/netplan/50-eth0-ansible.yaml
-    owner:  root
-    group:  root
-    mode:   '0644'
-  register: netplan_eth0_ansible
-  become:   true
+    src:        "50-eth0-ansible.yaml.j2"
+    dest:       "/etc/netplan/50-eth0-ansible.yaml"
+    owner:      root
+    group:      root
+    mode:       '0644'
+  register:     netplan_eth0_ansible
+  become:       true
   
 - name: remove old cloud-init netplan config file
   file:
-    path:   /etc/netplan/50-cloud-init.yaml
-    state:  absent
-  register: netplan_cloud_init
-  become:   true
+    path:       "/etc/netplan/50-cloud-init.yaml"
+    state:      absent
+  register:     netplan_cloud_init
+  become:       true
   
 - name: apply netplan change
-  shell:    "netplan apply"
-  when: netplan_eth0_ansible.changed or netplan_cloud_init.changed
-  become: true
+  shell:        "netplan apply"
+  when:         netplan_eth0_ansible.changed or netplan_cloud_init.changed
+  become:       true
   
 - name: restart service networkd
   systemd:
-    state: restarted
-    name:  systemd-networkd
-  when: netplan_eth0_ansible.changed or netplan_cloud_init.changed
-  become: true
+    state:      restarted
+    name:       systemd-networkd
+  when:         netplan_eth0_ansible.changed or netplan_cloud_init.changed
+  become:       true
+  
+- name: create dns_servers.conf file
+  file:
+    path:       "/etc/systemd/resolved.conf.d/"
+    state:      directory
+    owner:      root
+    group:      root
+    mode:       '0755'
+  become:       true
+  
+- name: create dns_servers.conf file
+  copy:
+    content: |
+      [Resolve]
+      DNS={% for dns in domain_name_servers %}{{ dns }} {% endfor %}
+      
+      Domains=~.
+    dest:       "/etc/systemd/resolved.conf.d/dns_servers.conf"
+    owner:      root
+    group:      root
+    mode:       '0644'
+  register:     dns_servers_file
+  become:       true
+  
+- name: create dnssec.conf file
+  copy:
+    content: |
+      [Resolve]
+      DNSSEC=true
+    dest:       "/etc/systemd/resolved.conf.d/dnssec.conf"
+    owner:      root
+    group:      root
+    mode:       '0644'
+  register:     dnssec_file
+  become:       true
+  
+- name: create fallback_dns.conf file
+  copy:
+    content: |
+      [Resolve]
+      FallbackDNS=
+    dest:       "/etc/systemd/resolved.conf.d/fallback_dns.conf"
+    owner:      root
+    group:      root
+    mode:       '0644'
+  register:     fallback_dns_file
+  become:       true
+  
+- name: restart service networkd
+  systemd:
+    state:      restarted
+    name:       systemd-resolved
+  when:         dns_servers_file.changed or dnssec_file.changed or fallback_dns_file.changed
+  become:       true
   
 - name: ensure that nobtcmd.txt cmdline is used
   lineinfile:

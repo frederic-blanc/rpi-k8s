@@ -1,0 +1,19 @@
+---
+- name: ensure docker certificates folder exist for registry url
+  file:
+    path:   "/etc/docker/certs.d/{{ k8s_registry_url }}"
+    state:  directory
+    owner:  root
+    group:  docker
+    mode:   '750'
+  become:   true
+  
+- name: deploy certificate authorities in it
+  copy:
+    src:    "files/generated/{{ domain_name }}.crt"
+    dest:   "/etc/docker/certs.d/{{ k8s_registry_url }}"
+    owner:  root
+    group:  docker
+    mode:   '640'
+  become:   true
+  
