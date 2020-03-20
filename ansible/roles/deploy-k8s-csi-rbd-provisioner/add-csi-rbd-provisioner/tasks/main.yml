@@ -1,0 +1,80 @@
+---
+- name: execute ceph mon dump command
+  shell:            "ceph mon dump --format json"
+  register:         ceph_mon_dump_command
+  changed_when:     false
+  become:           true
+  
+- name: set_fact ceph_volumes
+  set_fact:
+    ceph_mon:       "{{ ceph_mon_dump_command.stdout | from_json }}"
+  
+- name: get k8s ceph key
+  shell:            "ceph auth print-key client.{{ ceph.rbd_pool.user }}"
+  register:         ceph_auth_key_command
+  changed_when:     false
+  become:           true
+  
+- name: set_fact ceph_k8s_key
+  set_fact:
+    ceph_k8s_key:   "{{ ceph_auth_key_command.stdout }}"
+  
+- name: Generate storage class file on local
+  template:
+    src:            "k8s-csi-rbd-storage-class.j2"
+    dest:           "files/generated/k8s-csi-rbd-storage-class.yml"
+  delegate_to:      localhost
+  
+- name: copy csi rbd rbac file
+  copy:
+    src:            "files/k8s-csi-rbd-rbac.yml"
+    dest:           "/root/k8s/k8s-csi-rbd-rbac.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
+  
+- name: copy csi rbd storage class file
+  copy:
+    src:            "files/generated/k8s-csi-rbd-storage-class.yml"
+    dest:           "/root/k8s/k8s-csi-rbd-storage-class.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
+  
+- name: copy csi rbd provisoner file
+  copy:
+    src:            "files/k8s-csi-rbd-provisioner.yml"
+    dest:           "/root/k8s/k8s-csi-rbd-provisioner.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
+  
+- name: copy csi rbd plugin file
+  copy:
+    src:            "files/k8s-csi-rbd-plugin.yml"
+    dest:           "/root/k8s/k8s-csi-rbd-plugin.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
+  
+- name: apply csi rbd rbac file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-rbac.yml'"
+  become:           true
+  
+- name: apply csi rbd storage class file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-storage-class.yml'"
+  become:           true
+  
+- name: apply csi rbd provisoner file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-provisioner.yml'"
+  become:           true
+  
+- name: apply csi rbd plugin file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin.yml'"
+  become:           true
+  
+  

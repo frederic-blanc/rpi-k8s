@@ -1,0 +1,34 @@
+---
+- name: create rbd pool
+  block:
+  - name: delete previous resource if it exists
+    shell:          "ceph osd pool delete   {{ ceph.rbd_pool.name }}    {{ ceph.rbd_pool.name }}    --yes-i-really-really-mean-it"
+    
+  - name: create pool
+    shell:          "ceph osd pool create   {{ ceph.rbd_pool.name }}    {{ ceph.rbd_pool.pg_num  | default(ceph.osd_pool.default_pg_num) }} {{ ceph.rbd_pool.pgp_num | default(ceph.osd_pool.default_pgp_num) }} replicated"
+    
+  - name: create bootstrap-osd ceph keyring
+    shell:          "ceph osd pool application  enable  {{ ceph.rbd_pool.name }} rbd"
+    
+  become:           true
+  become_user:      ceph
+  
+- name: create pool user keyring
+  block:
+  - name: delete pool keyring
+    file:
+      path:         "/etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
+      state:        absent
+    
+  - name: create new keysring for pool
+    shell:          "ceph auth get-or-create client.{{ ceph.rbd_pool.user }} mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool={{ ceph.rbd_pool.name }}' -o /etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
+    
+  - name: copy pool keyring to local
+    fetch:
+      src:          "/etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
+      dest:         "files/generated/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
+      flat:         yes
+    
+  become:           true
+  become_user:      ceph
+  

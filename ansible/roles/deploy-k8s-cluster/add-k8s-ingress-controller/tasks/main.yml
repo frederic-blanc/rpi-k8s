@@ -88,6 +88,13 @@
       line:         "            - --default-ssl-certificate=$(POD_NAMESPACE)/default-ssl-certificate"
     changed_when:   false
     
+  - name: update ingress-nginx container image to 2 replicas
+    replace:
+      path:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
+      regexp:       "replicas: [0-9]+"
+      replace:      "replicas: 2"
+    changed_when:   false
+    
   - name: Copy build file to files/generated
     copy:
       src:          "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
@@ -116,7 +123,7 @@
       owner:        root
       group:        root
       mode:         '0755'
-  become: true
+  become:           true
   
 - name: copy ingress-nginx file on host
   copy:

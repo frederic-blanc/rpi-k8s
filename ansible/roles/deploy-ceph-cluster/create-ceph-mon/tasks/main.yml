@@ -85,7 +85,7 @@
       path:             "/etc/ceph/ceph.client.admin.keyring"
       state:            absent
     
-  - name: bootstrap-osd ceph keyring
+  - name: delete bootstrap-osd ceph keyring
     file:
       path:             "/var/lib/ceph/bootstrap-osd/ceph.keyring"
       state:            absent
