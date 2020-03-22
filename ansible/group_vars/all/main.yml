@@ -8,20 +8,22 @@ certificate_authority:
   O:  'YGGDRASIL'
   OU: 'YGGDRASIL.LOCAL'
 
-k8s_dashboard_url: k8s-dashboard.{{ domain_name }}
-k8s_registry_url:  k8s-registry.{{ domain_name }}
+k8s_dashboard_url:  k8s-dashboard.{{ domain_name }}
+dockerhub_url:      dockerhub.{{ domain_name }}
+nextcloud_url:      nextcloud.{{ domain_name }}
 
 ingress_certificate:
-  CN: 'k8s-cluster.{{ domain_name }}'
-  ST: '{{ certificate_authority.ST }}'
-  O:  '{{ certificate_authority.O }}'
-  OU: '{{ certificate_authority.OU }}'
-  SAN:
-  - "IP:{{ ansible_eth0.ipv4.address }}"
-  - "DNS:{{ fqdn }}"
-  - "DNS:{{ k8s_dashboard_url }}"
-  - "DNS:{{ k8s_registry_url  }}"
-
+  CN:   "k8s-cluster.{{ domain_name  }}"
+  ST:   "{{ certificate_authority.ST }}"
+  O:    "{{ certificate_authority.O  }}"
+  OU:   "{{ certificate_authority.OU }}"
+  SAN:  
+  -     "IP:{{ ansible_eth0.ipv4.address }}"
+  -     "DNS:{{ fqdn }}"
+  -     "DNS:{{ k8s_dashboard_url }}"
+  -     "DNS:{{ dockerhub_url }}"
+  -     "DNS:{{ nextcloud_url }}"
+  
 gateway: "192.168.1.1"
 domain_name_servers:
 - "192.168.1.254"
