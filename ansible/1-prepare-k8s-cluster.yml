@@ -1,9 +1,4 @@
 ---
-- name: wait for end of the first apt
-  hosts: all
-  roles:
-  - prepare-k8s-cluster/wait-for-first-apt
-
 - name: prepare node
   hosts: all
   roles:

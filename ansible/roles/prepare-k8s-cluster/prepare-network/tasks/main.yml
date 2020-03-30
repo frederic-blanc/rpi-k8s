@@ -308,3 +308,49 @@
   when:             cmdline_ipv6_disable.changed or cmdline_ip.changed or config_wifi_bt.changed
   become:           true
   
+- name: wait for apt to be finish
+  block:
+  - name:           create temporary build directory
+    tempfile:
+      state:        directory
+      suffix:       build
+    register:       build_tmp_dir
+    changed_when:   false
+    
+  - name: create wait_for_automatic_updates.sh script
+    copy:
+      content: |
+        #!/bin/bash  
+        # Ubuntu automatically checks for updates on first boot. This ensures that has completed before continuing.
+        # If it hasn't finished in 10 minutes, the script will exit ungracefully.
+        timeout=$(($(date +%s) + 600))
+        while pgrep apt > /dev/null; do
+            time=$(date +%s)
+            if [[ $time -ge $timeout ]]; then
+                exit 1
+            fi
+            sleep 1
+        done
+        exit 0
+        
+      dest:         "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
+      owner:        root
+      group:        root
+      mode:         '0755'
+    changed_when:   false
+    
+  - name: execute wait_for_automatic_updates.sh script
+    command:        "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
+    changed_when:   false
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:         "{{ build_tmp_dir.path }}"
+      state:        absent
+    when:           build_tmp_dir is defined
+    changed_when:   false
+  
+  when:             cmdline_ipv6_disable.changed or cmdline_ip.changed or config_wifi_bt.changed
+  become:           true
+  
