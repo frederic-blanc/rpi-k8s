@@ -2,134 +2,156 @@
 # activate cgroup
 - name: ensure /boot/firmware/nobtcmd.txt exist
   copy:
-    content: ""
-    dest:  /boot/firmware/nobtcmd.txt
-    force: no
-    owner: root
-    group: root
-    mode:  '0644'
-  become: true
+    content:        ""
+    dest:           "/boot/firmware/nobtcmd.txt"
+    force:          no
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
   
-- name: check nobtcmd cgroup_enable=cpuset
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^cgroup_enable=cpuset$'
-  register: cgroup_enable_cpuset
-  failed_when:  false
-  changed_when: false
-  
-- name: check nobtcmd cgroup_enable=memory
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^cgroup_enable=memory$'
-  register: cgroup_enable_memory
-  failed_when:  false
-  changed_when: false
-  
-- name: check nobtcmd cgroup_memory=1
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^cgroup_memory=1$'
-  register: cgroup_memory_1
-  failed_when:  false
-  changed_when: false
-  
-- name: check nobtcmd swapaccount_1=1
-  shell: (tr -s '[:space:]+ ' '\n' < /boot/firmware/nobtcmd.txt ) | grep -qq '^swapaccount=1$'
-  register: swapaccount_1
-  failed_when:  false
-  changed_when: false
-  
-- name: add   nobtcmd cgroup_enable=* if needed
-  shell: "{{ item }}"
-  args:
-    warn: false
-  when: cgroup_enable_cpuset.rc != 0 or cgroup_enable_memory.rc != 0
-  with_items:
-  - cp -pf /boot/firmware/nobtcmd.txt /tmp/nobtcmd.txt
-  - (tr -s '[:space:]+ ' '\n' < /tmp/nobtcmd.txt | sed '/^cgroup_enable=.*$/d;' ; printf "\ncgroup_enable=cpuset\ncgroup_enable=memory\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/firmware/nobtcmd.txt
-  - rm -f /tmp/nobtcmd.txt
-  become: true
-  
-- name: add   nobtcmd cgroup_memory=1 if needed
-  shell: "{{ item }}"
-  args:
-    warn: false
-  when: cgroup_memory_1.rc != 0
-  with_items:
-  - cp -pf /boot/firmware/nobtcmd.txt /tmp/nobtcmd.txt
-  - (tr -s '[:space:]+ ' '\n' < /tmp/nobtcmd.txt | sed '/^cgroup_memory=.*$/d;' ; printf "\ncgroup_memory=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/firmware/nobtcmd.txt
-  - rm -f /tmp/nobtcmd.txt
-  become: true
-  
-- name: add   nobtcmd swapaccount=1 if needed
-  shell: "{{ item }}"
-  args:
-    warn: false
-  when: swapaccount_1.rc != 0
-  with_items:
-  - cp -pf /boot/firmware/nobtcmd.txt /tmp/nobtcmd.txt
-  - (tr -s '[:space:]+ ' '\n' < /tmp/nobtcmd.txt | sed '/^swapaccount=.*$/d;' ; printf "\nswapaccount=1\n" ) | tr -s '\n' ' ' | sed 's/^\s*//; s/\s*$//' > /boot/firmware/nobtcmd.txt
-  - rm -f /tmp/nobtcmd.txt
-  become: true
+- name: activate cgroup_enable, cgroup_memory and swapaccount in nobtcmd.txt
+  block:
+  - name:           create temporary build directory
+    tempfile:
+      state:        directory
+      suffix:       build
+    register:       build_tmp_dir
+    changed_when:   false
+    
+  - name: copy nobtcmd.txt to build_tmp_dir
+    copy: 
+      remote_src:   yes
+      src:          "/boot/firmware/nobtcmd.txt"
+      dest:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+    changed_when:   false
+    
+  - name: replace space by carriage return into the built file
+    replace:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      regexp:       '\s+'
+      replace:      '\n'
+    changed_when:   false
+    
+  - name: ensure swapaccount is set to 1
+    lineinfile:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      regexp:       '^swapaccount=.*$'
+      line:         "swapaccount=1"
+    changed_when:   false
+    
+  - name: ensure cgroup_memory is set to 1
+    lineinfile:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      regexp:       '^cgroup_memory=.*$'
+      line:         "cgroup_memory=1"
+    changed_when:   false
+    
+  - name: ensure cgroup_enable cpuset and memory are set
+    lineinfile:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      line:         "{{ item }}"
+    with_items:
+    - "cgroup_enable=cpuset"
+    - "cgroup_enable=memory"
+    changed_when:   false
+    
+  - name: ensure wrong cgroup_enable value are absent
+    lineinfile:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      regexp:       '^cgroup_enable=(?!(memory|cpuset)$).*$'
+      state:        absent
+    changed_when:   false
+    
+  - name: replace space by carriage return into the built file
+    replace:
+      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      regexp:       '\n'
+      replace:      ' '
+    changed_when:   false
+    
+  - name: copy built nobtcmd.txt to /boot/firmware
+    copy: 
+      remote_src:   yes
+      src:          "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      dest:         "/boot/firmware/nobtcmd.txt"
+      owner:        root
+      group:        root
+      mode:         '0644'
+    register:       cmdline_docker_enable
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:         "{{ build_tmp_dir.path }}"
+      state:        absent
+    when:           build_tmp_dir is defined
+    changed_when:   false
+  become:           true
   
 # reboot if needed
 - name: reboot on change
   reboot:
-  when: cgroup_enable_cpuset.rc != 0 or cgroup_enable_memory.rc != 0 or cgroup_memory_1.rc != 0 or swapaccount_1.rc != 0
-  become: true
+  when:             cmdline_docker_enable.changed
+  become:           true
   
 # Install docker packages
 - name: Install docker and its dependencies
   apt: 
-    name: "docker.io"
-    state: present
-    update_cache: yes
-    autoremove: yes
-    force_apt_get: yes
+    name:           "docker.io"
+    state:          present
+    update_cache:   yes
+    autoremove:     yes
+    force_apt_get:  yes
     install_recommends: no
   notify:
     - docker status
-  become: true
+  become:           true
   
 - name: Ensures /etc/docker dir exists
   file: 
-    path:  /etc/docker
-    state: directory
-    owner: root
-    group: root
-    mode:  '0755'
-  become: true
+    path:           "/etc/docker"
+    state:          directory
+    owner:          root
+    group:          root
+    mode:           '0755'
+  become:           true
   
 - name: Copy docker daemon.json on server to /etc/docker
   template:
-    src:   docker-daemon.j2
-    dest:  /etc/docker/daemon.json
-    owner: root
-    group: docker
-    mode: '0644'
-  register: daemon
-  become: true
+    src:            "docker-daemon.j2"
+    dest:           "/etc/docker/daemon.json"
+    owner:          root
+    group:          docker
+    mode:           '0644'
+  register:         daemon
+  become:           true
   
 - name: restart service docker
   systemd:
-    state: restarted
-    daemon_reload: yes
-    name:  docker
-  when: daemon.changed
+    state:          restarted
+    daemon_reload:  yes
+    name:           docker
+  when:             daemon.changed
   notify:
   - docker status
   become: true
   
 - name: ensure service docker is started and enable
   systemd:
-    name:    docker
-    state:   started
-    enabled: true
+    name:           docker
+    state:          started
+    enabled:        true
   notify:
   - docker status
-  become: true
+  become:           true
   
 # add docker group to work_users
 - name: add docker group to work_users
   user:
-    name: '{{ item.name }}'
-    groups: docker
-    append: yes
-  with_items: "{{ work_users }}"
+    name:           "{{ item.name }}"
+    groups:         docker
+    append:         yes
+  with_items:       "{{ work_users }}"
   become: true
   
