@@ -14,10 +14,10 @@ spec:
       port: 8080
       protocol: TCP
       targetPort: 8680
-    - name: grpc-metrics
-      port: 8090
-      protocol: TCP
-      targetPort: 8090
+
+                
+                   
+                      
 ---
 kind:           Deployment
 apiVersion:     apps/v1
@@ -45,6 +45,7 @@ spec:
             - "--retry-interval-start=500ms"
             - "--enable-leader-election=true"
             - "--leader-election-type=leases"
+            - "--feature-gates=Topology=true"
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
@@ -86,7 +87,7 @@ spec:
             - name: socket-dir
               mountPath: /csi
         - name: csi-resizer
-          image: blancfrederic/csi-resizer-arm64:v0.4.0
+          image: blancfrederic/csi-resizer-arm64:v0.5.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"
@@ -105,7 +106,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
           # for stable functionality replace canary with latest release version
-          image: quay.io/cephcsi/cephcsi:v2.0.1-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
           args:
             - "--nodeid=$(NODE_ID)"
             - "--type=rbd"
@@ -114,9 +115,9 @@ spec:
             - "--v=5"
             - "--drivername=rbd.csi.ceph.com"
             - "--pidlimit=-1"
-            - "--metricsport=8090"
-            - "--metricspath=/metrics"
-            - "--enablegrpcmetrics=false"
+                                  
+                                      
+                                         
           env:
             - name: POD_IP
               valueFrom:
@@ -146,7 +147,7 @@ spec:
             - name: keys-tmp-dir
               mountPath: /tmp/csi/keys
         - name: liveness-prometheus
-          image: quay.io/cephcsi/cephcsi:v2.0.1-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
           args:
             - "--type=liveness"
             - "--endpoint=$(CSI_ENDPOINT)"

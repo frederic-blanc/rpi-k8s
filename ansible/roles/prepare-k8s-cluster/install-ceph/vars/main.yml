@@ -3,6 +3,6 @@ ceph:
   repository:
     deb_arch: arm64
     dist:     debian-nautilus
-    version:  xenial
+    version:  bionic
     channel:  main
   
