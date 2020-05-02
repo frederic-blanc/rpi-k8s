@@ -23,21 +23,22 @@
 - name: Adding apt repository for Kubernetes
   apt_repository:
     repo:           "deb https://download.ceph.com/{{ ceph.repository.dist }}/ {{ ceph.repository.version }} {{ ceph.repository.channel }}"
-    filename:       "ceph.list"
+    filename:       "ceph"
     state:          present
   become:           true
   
-- name: Install ceph dependencies
-  apt: 
-    name:           "{{ packages }}"
-    state:          present
-    update_cache:   yes
-    autoremove:     yes
-    force_apt_get:  yes
-  vars:
-    packages:
-    - "libcurl3"
-  become:           true
+## not needed anymore ceph bionic use libcurl4 now
+#- name: Install ceph dependencies
+#  apt: 
+#    name:           "{{ packages }}"
+#    state:          present
+#    update_cache:   yes
+#    autoremove:     yes
+#    force_apt_get:  yes
+#  vars:
+#    packages:
+#    - "libcurl3"
+#  become:           true
   
 - name: Install ceph binaries
   apt: 

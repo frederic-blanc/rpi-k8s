@@ -40,6 +40,8 @@ useful_tools:
 - dnsutils
 - dos2unix
 - unzip
+- wget
+- curl
 
 # users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################

@@ -32,7 +32,7 @@
   apt_repository:
     repo: deb https://apt.kubernetes.io/ {{ k8s.repository.version }} {{ k8s.repository.channel }}
     state: present
-    filename: kubernetes.list
+    filename: kubernetes
   become: true
   
 ## disable swap

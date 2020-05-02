@@ -26,7 +26,7 @@ spec:
           # created by privileged CSI driver container.
           securityContext:
             privileged: true
-          image: blancfrederic/csi-node-driver-registrar-arm64:v1.2.0
+          image: blancfrederic/csi-node-driver-registrar-arm64:v1.3.0
           args:
             - "--v=5"
             - "--csi-address=/csi/csi.sock"
@@ -55,8 +55,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          # for stable functionality replace canary with latest release version
-          image: quay.io/cephcsi/cephcsi:v2.0.1-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
           args:
             - "--nodeid=$(NODE_ID)"
             - "--type=rbd"
@@ -64,9 +63,11 @@ spec:
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--v=5"
             - "--drivername=rbd.csi.ceph.com"
-            - "--metricsport=8090"
-            - "--metricspath=/metrics"
-            - "--enablegrpcmetrics=false"
+            # If topology based provisioning is desired, configure required
+            # node labels representing the nodes topology domain
+            # and pass the label names below, for CSI to consume and advertize
+            # its equivalent topology domain
+            # - "--domainlabels=failure-domain/region,failure-domain/zone"
           env:
             - name: POD_IP
               valueFrom:
@@ -110,7 +111,7 @@ spec:
         - name: liveness-prometheus
           securityContext:
             privileged: true
-          image: quay.io/cephcsi/cephcsi:v2.0.1-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
           args:
             - "--type=liveness"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -169,7 +170,7 @@ spec:
             medium: "Memory"
           }
 ---
-# This is a service to expose the liveness and grpc metrics
+# This is a service to expose the liveness metrics
 apiVersion:     v1
 kind:           Service
 metadata:
@@ -183,9 +184,6 @@ spec:
       port: 8080
       protocol: TCP
       targetPort: 8680
-    - name: grpc-metrics
-      port: 8090
-      protocol: TCP
-      targetPort: 8090
   selector:
     app: csi-rbdplugin
+---
