@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-# Use arm64 ubuntu 18.04 LTS
-=======
 # use arm64 ubuntu 20.04 LTS
->>>>>>> arm64
+
 The 64bits image can be found here: https://ubuntu.com/download/raspberry-pi
 
 I use the [20.04 LTS version](http://cdimage.ubuntu.com/releases/20.04/release/ubuntu-20.04-preinstalled-server-arm64+raspi.img.xz).
