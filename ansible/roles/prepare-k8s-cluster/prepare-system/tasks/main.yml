@@ -5,16 +5,27 @@
     update_cache:   yes
     autoremove:     yes
     force_apt_get:  yes
+  register:         upgrade_results
   become:           true
   
-- name: add useful tooling
-  apt:
-    name:           "{{ useful_tools }}"
-    force_apt_get:  yes
+- name: set fact to signal that a reboot is needed
+  set_fact:         reboot_on_upgrade="{{ 'reboot' in upgrade_results.stdout }}" 
+  
+- name: ensure that config.txt cmdline is correct
+  lineinfile:
+    path:           "/boot/firmware/config.txt"
+    regexp:         '^cmdline='
+    line:           "cmdline=cmdline.txt"
+  register:         boot_config
   become:           true
   
 - name: Update firmware if needed
   block:
+  - name: add useful tooling
+    apt:
+      name:           "unzip"
+      force_apt_get:  yes
+    
   - name:           create temporary build directory
     tempfile:
       state:        directory
@@ -54,14 +65,18 @@
     name:           "{{ timezone }}"
   become:           true
   
-# reboot if needed
-- name: reboot on change
-  reboot:
-  when:             firmware.changed
+- name: add useful tooling
+  apt:
+    name:           "{{ useful_tools }}"
+    force_apt_get:  yes
   become:           true
   
-- name: wait for apt to be finish
+# reboot if needed
+- name: reboot on change
   block:
+  - name: reboot
+    reboot:
+    
   - name:           create temporary build directory
     tempfile:
       state:        directory
@@ -103,6 +118,6 @@
     when:           build_tmp_dir is defined
     changed_when:   false
   
-  when:             firmware.changed
+  when:             reboot_on_upgrade or firmware.changed or boot_config.changed
   become:           true
   

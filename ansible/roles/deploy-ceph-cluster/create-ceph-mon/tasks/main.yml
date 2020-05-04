@@ -21,6 +21,7 @@
     install_recommends: no
   vars:
     packages:
+    - "acl"             # needed for ansible become_user
     - "ceph-mon"
     - "ceph-mgr"
     - "ceph-mds"

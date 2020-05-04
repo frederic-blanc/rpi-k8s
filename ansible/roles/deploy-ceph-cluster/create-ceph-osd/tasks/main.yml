@@ -15,6 +15,7 @@
     install_recommends: no
   vars:
     packages:
+    - "acl"             # needed for ansible become_user
     - "ceph-osd"
   become:               true
   

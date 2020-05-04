@@ -1,7 +1,22 @@
 ---
-- name: populate service facts
-  service_facts:
+## until service_facts works on ubuntu 20.04
+#- name: populate service facts
+#  service_facts:
+#  no_log:           true
+
+- name: get list of services
+  shell:            "systemctl list-unit-files --no-page --type=service"
+  register:         services_cmd
+  changed_when:     false
   no_log:           true
+  
+- name: create services list
+  set_fact:
+    services_list:  "{{ ( services_cmd.stdout_lines | map('regex_replace', '^(.*\\.service) .*$', '\\1') | list )[1:-2] }}"
+  
+- name: create services dict
+  set_fact:
+    services:       "{{ dict( services_list | zip( services_list )) }}"
   
 - name: ensure ceph base binaries is installed
   apt: 
