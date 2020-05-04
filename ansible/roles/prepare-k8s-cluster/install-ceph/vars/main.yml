@@ -1,8 +1,0 @@
----
-ceph:
-  repository:
-    deb_arch: arm64
-    dist:     debian-nautilus
-    version:  bionic
-    channel:  main
-  

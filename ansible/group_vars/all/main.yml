@@ -42,6 +42,7 @@ useful_tools:
 - unzip
 - wget
 - curl
+- net-tools
 
 # users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################

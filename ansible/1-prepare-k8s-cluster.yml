@@ -2,8 +2,8 @@
 - name: prepare node
   hosts: all
   roles:
-  - prepare-k8s-cluster/prepare-network
   - prepare-k8s-cluster/prepare-system
+  - prepare-k8s-cluster/prepare-network
   - prepare-k8s-cluster/prepare-users
   - prepare-k8s-cluster/install-docker
   - prepare-k8s-cluster/install-k8s

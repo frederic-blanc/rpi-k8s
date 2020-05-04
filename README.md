@@ -1,7 +1,7 @@
 # use arm64 ubuntu 18.04 LTS
 The 64bits image can be found here: https://ubuntu.com/download/raspberry-pi
 
-I prefer the 18.04 LTS version, instead of the latest one, which support ends in june 2020
+I use the [20.04 LTS version](http://cdimage.ubuntu.com/releases/20.04/release/ubuntu-20.04-preinstalled-server-arm64+raspi.img.xz).
 
 To manage to set ip definition and ubuntu account to no expired, as well as a non update kernel at boot (this will be managed by the ansible install), through the use of cloud-init. 
 

@@ -1,43 +1,15 @@
 ---
-- name: ensure /boot/firmware/(config|syscfg|nobtcmd).txt exist
+- name: ensure /boot/firmware/config.txt exist
   copy:
     content:        ""
-    dest:           "/boot/firmware/config.txt"
-    force:          no
-    owner:          root
-    group:          root
-    mode:           '0644'
-  with_items:
-  - "/boot/firmware/config.txt"
-  - "/boot/firmware/syscfg.txt"
-  - "/boot/firmware/nobtcmd.txt"
-  become:           true
-  
-- name: ensure /boot/firmware/nobtcfg.txt exist
-  copy:
-    content:        "[all]"
-    dest:           "/boot/firmware/nobtcfg.txt"
+    dest:           "/boot/firmware/cmdline.txt"
     force:          no
     owner:          root
     group:          root
     mode:           '0644'
   become:           true
   
-- name: ensure that nobtcmd.txt cmdline exists
-  lineinfile:
-    path:           "/boot/firmware/config.txt"
-    regexp:         '^cmdline='
-    line:           "cmdline=nobtcmd.txt"
-  become:           true
-  
-- name: ensure that nobtcfg.txt config is used
-  lineinfile:
-    path:           "/boot/firmware/syscfg.txt"
-    regexp:         '^include '
-    line:           "include nobtcfg.txt"
-  become:           true
-  
-- name: disable ipv6 in nobtcmd.txt
+- name: disable ipv6 in cmdline.txt
   block:
   - name:           create temporary build directory
     tempfile:
@@ -46,39 +18,39 @@
     register:       build_tmp_dir
     changed_when:   false
     
-  - name: copy nobtcmd.txt to build_tmp_dir
+  - name: copy cmdline.txt to build_tmp_dir
     copy: 
       remote_src:   yes
-      src:          "/boot/firmware/nobtcmd.txt"
-      dest:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      src:          "/boot/firmware/cmdline.txt"
+      dest:         "{{ build_tmp_dir.path }}/cmdline.txt"
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\s+'
       replace:      '\n'
     changed_when:   false
     
   - name: ensure  ipv6.disable is set to 1
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '^ipv6\.disable=.*$'
       line:         "ipv6.disable=1"
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\n'
       replace:      ' '
     changed_when:   false
     
-  - name: copy built nobtcmd.txt to /boot/firmware
+  - name: copy built cmdline.txt to /boot/firmware
     copy: 
       remote_src:   yes
-      src:          "{{ build_tmp_dir.path }}/nobtcmd.txt"
-      dest:         "/boot/firmware/nobtcmd.txt"
+      src:          "{{ build_tmp_dir.path }}/cmdline.txt"
+      dest:         "/boot/firmware/cmdline.txt"
       owner:        root
       group:        root
       mode:         '0644'
@@ -226,7 +198,7 @@
   when:             install_resolvconf.changed or dns_servers_file.changed
   become:           true
   
-- name: remove ip in nobtcmd.txt
+- name: remove ip in cmdline.txt
   block:
   - name:           create temporary build directory
     tempfile:
@@ -235,39 +207,39 @@
     register:       build_tmp_dir
     changed_when:   false
     
-  - name: copy nobtcmd.txt to build_tmp_dir
+  - name: copy cmdline.txt to build_tmp_dir
     copy: 
       remote_src:   yes
-      src:          "/boot/firmware/nobtcmd.txt"
-      dest:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      src:          "/boot/firmware/cmdline.txt"
+      dest:         "{{ build_tmp_dir.path }}/cmdline.txt"
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\s+'
       replace:      '\n'
     changed_when:   false
     
   - name: ensure ip is absent
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '^ip=.*$'
       state:        absent
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\n'
       replace:      ' '
     changed_when:   false
     
-  - name: copy built nobtcmd.txt to /boot/firmware
+  - name: copy built cmdline.txt to /boot/firmware
     copy: 
       remote_src:   yes
-      src:          "{{ build_tmp_dir.path }}/nobtcmd.txt"
-      dest:         "/boot/firmware/nobtcmd.txt"
+      src:          "{{ build_tmp_dir.path }}/cmdline.txt"
+      dest:         "/boot/firmware/cmdline.txt"
       owner:        root
       group:        root
       mode:         '0644'
@@ -294,8 +266,7 @@
   
 - name: add module bt and wifi to disable list
   blockinfile:
-    path:           "/boot/firmware/nobtcfg.txt"
-    insertafter:    "[all]"
+    path:           "/boot/firmware/usercfg.txt"
     block: |
       dtoverlay=disable-wifi
       dtoverlay=disable-bt
@@ -305,52 +276,6 @@
 # reboot if needed
 - name: reboot on change
   reboot:
-  when:             cmdline_ipv6_disable.changed or cmdline_ip.changed or config_wifi_bt.changed
-  become:           true
-  
-- name: wait for apt to be finish
-  block:
-  - name:           create temporary build directory
-    tempfile:
-      state:        directory
-      suffix:       build
-    register:       build_tmp_dir
-    changed_when:   false
-    
-  - name: create wait_for_automatic_updates.sh script
-    copy:
-      content: |
-        #!/bin/bash  
-        # Ubuntu automatically checks for updates on first boot. This ensures that has completed before continuing.
-        # If it hasn't finished in 10 minutes, the script will exit ungracefully.
-        timeout=$(($(date +%s) + 600))
-        while pgrep apt > /dev/null; do
-            time=$(date +%s)
-            if [[ $time -ge $timeout ]]; then
-                exit 1
-            fi
-            sleep 1
-        done
-        exit 0
-        
-      dest:         "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
-      owner:        root
-      group:        root
-      mode:         '0755'
-    changed_when:   false
-    
-  - name: execute wait_for_automatic_updates.sh script
-    command:        "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
-    changed_when:   false
-    
-  always:
-  - name: delete temporary build directory
-    file:
-      path:         "{{ build_tmp_dir.path }}"
-      state:        absent
-    when:           build_tmp_dir is defined
-    changed_when:   false
-  
   when:             cmdline_ipv6_disable.changed or cmdline_ip.changed or config_wifi_bt.changed
   become:           true
   

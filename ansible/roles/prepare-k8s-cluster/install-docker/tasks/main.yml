@@ -1,16 +1,16 @@
 ---
 # activate cgroup
-- name: ensure /boot/firmware/nobtcmd.txt exist
+- name: ensure /boot/firmware/cmdline.txt exist
   copy:
     content:        ""
-    dest:           "/boot/firmware/nobtcmd.txt"
+    dest:           "/boot/firmware/cmdline.txt"
     force:          no
     owner:          root
     group:          root
     mode:           '0644'
   become:           true
   
-- name: activate cgroup_enable, cgroup_memory and swapaccount in nobtcmd.txt
+- name: activate cgroup_enable, cgroup_memory and swapaccount in cmdline.txt
   block:
   - name:           create temporary build directory
     tempfile:
@@ -19,37 +19,37 @@
     register:       build_tmp_dir
     changed_when:   false
     
-  - name: copy nobtcmd.txt to build_tmp_dir
+  - name: copy cmdline.txt to build_tmp_dir
     copy: 
       remote_src:   yes
-      src:          "/boot/firmware/nobtcmd.txt"
-      dest:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      src:          "/boot/firmware/cmdline.txt"
+      dest:         "{{ build_tmp_dir.path }}/cmdline.txt"
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\s+'
       replace:      '\n'
     changed_when:   false
     
   - name: ensure swapaccount is set to 1
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '^swapaccount=.*$'
       line:         "swapaccount=1"
     changed_when:   false
     
   - name: ensure cgroup_memory is set to 1
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '^cgroup_memory=.*$'
       line:         "cgroup_memory=1"
     changed_when:   false
     
   - name: ensure cgroup_enable cpuset and memory are set
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       line:         "{{ item }}"
     with_items:
     - "cgroup_enable=cpuset"
@@ -58,23 +58,23 @@
     
   - name: ensure wrong cgroup_enable value are absent
     lineinfile:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '^cgroup_enable=(?!(memory|cpuset)$).*$'
       state:        absent
     changed_when:   false
     
   - name: replace space by carriage return into the built file
     replace:
-      path:         "{{ build_tmp_dir.path }}/nobtcmd.txt"
+      path:         "{{ build_tmp_dir.path }}/cmdline.txt"
       regexp:       '\n'
       replace:      ' '
     changed_when:   false
     
-  - name: copy built nobtcmd.txt to /boot/firmware
+  - name: copy built cmdline.txt to /boot/firmware
     copy: 
       remote_src:   yes
-      src:          "{{ build_tmp_dir.path }}/nobtcmd.txt"
-      dest:         "/boot/firmware/nobtcmd.txt"
+      src:          "{{ build_tmp_dir.path }}/cmdline.txt"
+      dest:         "/boot/firmware/cmdline.txt"
       owner:        root
       group:        root
       mode:         '0644'
@@ -92,52 +92,6 @@
 # reboot if needed
 - name: reboot on change
   reboot:
-  when:             cmdline_docker_enable.changed
-  become:           true
-  
-- name: wait for apt to be finish
-  block:
-  - name:           create temporary build directory
-    tempfile:
-      state:        directory
-      suffix:       build
-    register:       build_tmp_dir
-    changed_when:   false
-    
-  - name: create wait_for_automatic_updates.sh script
-    copy:
-      content: |
-        #!/bin/bash  
-        # Ubuntu automatically checks for updates on first boot. This ensures that has completed before continuing.
-        # If it hasn't finished in 10 minutes, the script will exit ungracefully.
-        timeout=$(($(date +%s) + 600))
-        while pgrep apt > /dev/null; do
-            time=$(date +%s)
-            if [[ $time -ge $timeout ]]; then
-                exit 1
-            fi
-            sleep 1
-        done
-        exit 0
-        
-      dest:         "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
-      owner:        root
-      group:        root
-      mode:         '0755'
-    changed_when:   false
-    
-  - name: execute wait_for_automatic_updates.sh script
-    command:        "{{ build_tmp_dir.path }}/wait_for_automatic_updates.sh"
-    changed_when:   false
-    
-  always:
-  - name: delete temporary build directory
-    file:
-      path:         "{{ build_tmp_dir.path }}"
-      state:        absent
-    when:           build_tmp_dir is defined
-    changed_when:   false
-  
   when:             cmdline_docker_enable.changed
   become:           true
   
