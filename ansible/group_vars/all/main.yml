@@ -28,11 +28,6 @@ domain_name_servers:
 
 timezone: "Europe/Paris"
 
-firmware:
-  archive: 'vl805_update_0137ab.zip'
-  new_bin:  'vl805_fw_0137ab.bin'
-  old_bin:  'vl805_fw_013701.bin'
-
 useful_tools:
 - vim
 - htop
