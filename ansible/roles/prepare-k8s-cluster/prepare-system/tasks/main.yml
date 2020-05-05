@@ -26,6 +26,12 @@
       name:           "unzip"
       force_apt_get:  yes
     
+  - name: Ensures files/generated dir exists on controller
+    file: 
+      path:         "files/generated"
+      state:        directory
+    delegate_to:    localhost
+    
   - name:           create temporary build directory
     tempfile:
       state:        directory
