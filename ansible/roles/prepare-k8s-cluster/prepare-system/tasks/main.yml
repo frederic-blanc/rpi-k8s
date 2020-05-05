@@ -23,21 +23,15 @@
   block:
   - name: add useful tooling
     apt:
-      name:           "unzip"
-      force_apt_get:  yes
-    
+      name:         "unzip"
+      force_apt_get: yes
+    become:         true
+  
   - name: Ensures files/generated dir exists on controller
     file: 
       path:         "files/generated"
       state:        directory
     delegate_to:    localhost
-    
-  - name:           create temporary build directory
-    tempfile:
-      state:        directory
-      suffix:       ".firmware"
-    register:       firmware_tmp_dir
-    changed_when:   false
     
   - name: download latest firmware version
     get_url:
@@ -46,12 +40,21 @@
       force:        true
     delegate_to:    localhost
     
+  - name:           create temporary build directory
+    tempfile:
+      state:        directory
+      suffix:       ".firmware"
+    register:       firmware_tmp_dir
+    changed_when:   false
+    become:         true
+    
   - name: unarchive firmware repository to firmware_tmp_dir
     unarchive:
       src:          "files/generated/rpi-eeprom.zip"
       dest:         "{{ firmware_tmp_dir.path }}"
       mode:         '0500'
     changed_when:   false
+    become:         true
     
   - name: get latest vl805 version
     find:
@@ -59,6 +62,7 @@
       patterns:     "vl805-*.bin"
       file_type:    file
     register:       vl805_firmwares
+    become:         true
     
   - name: select latest firmware version
     set_fact:       vl805_version="{{ (vl805_firmwares.files | map(attribute='path') | map('basename') | map('regex_replace', '^vl805-(.*)\\.bin$', '\\1') | list | sort )[-1] }}"
@@ -68,11 +72,13 @@
     register:       firmware_check
     changed_when:   false
     failed_when:    false
+    become:         true
     
   - name: Update firmware if needed
     shell:          "{{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/vl805 -w {{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/{{ firmware.release }}/vl805-{{ vl805_version }}.bin"
     when:           firmware_check.rc != 0
     register:       firmware
+    become:         true
     
   always:
   - name: delete temporary build directory
@@ -81,8 +87,7 @@
       state:        absent
     when:           firmware_tmp_dir is defined
     changed_when:   false
-    
-  become:           true
+    become:         true
   
 - name: Set timezone
   timezone:
