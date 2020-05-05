@@ -29,35 +29,53 @@
   - name:           create temporary build directory
     tempfile:
       state:        directory
-      suffix:       build
-    register:       build_tmp_dir
+      suffix:       ".firmware"
+    register:       firmware_tmp_dir
     changed_when:   false
     
-  - name: copy nobtcmd.txt to build_tmp_dir
+  - name: download latest firmware version
+    get_url:
+      url:         "https://github.com/raspberrypi/rpi-eeprom/archive/master.zip"
+      dest:         "files/generated/rpi-eeprom.zip"
+      force:        true
+    delegate_to:    localhost
+    
+  - name: unarchive firmware repository to firmware_tmp_dir
     unarchive:
-      src:          "{{ firmware.archive }}"
-      dest:         "{{ build_tmp_dir.path }}"
+      src:          "files/generated/rpi-eeprom.zip"
+      dest:         "{{ firmware_tmp_dir.path }}"
       mode:         '0500'
-      exclude:      "{{ firmware.old_bin }}"
     changed_when:   false
+    
+  - name: get latest vl805 version
+    find:
+      paths:        "{{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/{{ firmware.release }}"
+      patterns:     "vl805-*.bin"
+      file_type:    file
+    register:       vl805_firmwares
+    
+  - name: select latest firmware version
+    set_fact:       vl805_version="{{ (vl805_firmwares.files | map(attribute='path') | map('basename') | map('regex_replace', '^vl805-(.*)\\.bin$', '\\1') | list | sort )[-1] }}"
     
   - name: Check firmware version
-    shell:          "{{ build_tmp_dir.path }}/vl805 -v {{ build_tmp_dir.path }}/{{ firmware.new_bin }}"
+    shell:          "{{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/vl805 -v {{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/{{ firmware.release }}/vl805-{{ vl805_version }}.bin"
     register:       firmware_check
     changed_when:   false
+    failed_when:    false
     
   - name: Update firmware if needed
-    shell:          "{{ build_tmp_dir.path }}/vl805 -w {{ build_tmp_dir.path }}/{{ firmware.new_bin }}"
+    shell:          "{{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/vl805 -w {{ firmware_tmp_dir.path }}/rpi-eeprom-master/firmware/{{ firmware.release }}/vl805-{{ vl805_version }}.bin"
     when:           firmware_check.rc != 0
     register:       firmware
     
   always:
   - name: delete temporary build directory
     file:
-      path:         "{{ build_tmp_dir.path }}"
+      path:         "{{ firmware_tmp_dir.path }}"
       state:        absent
-    when:           build_tmp_dir is defined
+    when:           firmware_tmp_dir is defined
     changed_when:   false
+    
   become:           true
   
 - name: Set timezone
