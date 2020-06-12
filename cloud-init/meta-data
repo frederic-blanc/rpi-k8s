@@ -8,3 +8,5 @@ instance_id: cloud-image
 
 package_update:  false
 package_upgrade: false
+
+#resize_rootfs:  false
