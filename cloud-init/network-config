@@ -4,8 +4,6 @@
 #
 # https://cloudinit.readthedocs.io/
 # https://netplan.io/reference
-#
-# Some additional examples are commented out below
 
 version: 2
 ethernets:
@@ -15,24 +13,3 @@ ethernets:
     addresses:
     - 192.168.1.21/24
     gateway4: 192.168.1.1
-
-#  eth0:
-#    dhcp4: true
-#    optional: true
-
-#wifis:
-#  wlan0:
-#    dhcp4: true
-#    optional: true
-#    access-points:
-#      homessid:
-#        password: "S3kr1t"
-#      myotherlan:
-#        password: "correct battery horse staple"
-#      workssid:
-#        auth:
-#          key-management: eap
-#          method: peap
-#          identity: "me@example.com"
-#          password: "passw0rd"
-#          ca-certificate: /etc/my_ca.pem
