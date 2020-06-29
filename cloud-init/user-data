@@ -16,3 +16,5 @@ chpasswd:
 
 package_update: false
 package_upgrade: false
+
+#resize_rootfs: false

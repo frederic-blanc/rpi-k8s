@@ -182,7 +182,8 @@
     content: |
       # Make edits to /etc/resolvconf/resolv.conf.d/head.
       {% for dns in domain_name_servers %}
-      nameserver {{ dns }} 
+      nameserver {{ dns }}
+      search     {{ domain_name }}
       {% endfor %}
     dest:           "/etc/resolvconf/resolv.conf.d/head"
     owner:          root
