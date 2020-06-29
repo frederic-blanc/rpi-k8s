@@ -1,43 +1,40 @@
 ---
-kind:           Service
-apiVersion:     v1
+kind: Service
+apiVersion: v1
 metadata:
-  name:         csi-rbdplugin-provisioner
-  namespace:    rbd-csi
+  name: csi-rbdplugin-provisioner
+  namespace: rbd-csi
   labels:
-    app:        csi-metrics
+    app: csi-metrics
 spec:
   selector:
-    app:        csi-rbdplugin-provisioner
+    app: csi-rbdplugin-provisioner
   ports:
     - name: http-metrics
       port: 8080
       protocol: TCP
       targetPort: 8680
 
-                
-                   
-                      
 ---
-kind:           Deployment
-apiVersion:     apps/v1
+kind: Deployment
+apiVersion: apps/v1
 metadata:
-  name:         csi-rbdplugin-provisioner
-  namespace:    rbd-csi
+  name: csi-rbdplugin-provisioner
+  namespace: rbd-csi
 spec:
-  replicas:     2
+  replicas: 2
   selector:
     matchLabels:
-      app:      csi-rbdplugin-provisioner
+      app: csi-rbdplugin-provisioner
   template:
     metadata:
       labels:
-        app:    csi-rbdplugin-provisioner
+        app: csi-rbdplugin-provisioner
     spec:
-      serviceAccount:   rbd-csi-provisioner
+      serviceAccount: rbd-csi-provisioner
       containers:
         - name: csi-provisioner
-          image: blancfrederic/csi-provisioner-arm64:v1.4.0
+          image: blancfrederic/csi-provisioner-arm64:v1.6.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"
@@ -54,7 +51,7 @@ spec:
             - name: socket-dir
               mountPath: /csi
         - name: csi-snapshotter
-          image: blancfrederic/csi-snapshotter-arm64:v1.2.2
+          image: blancfrederic/csi-snapshotter-arm64:v2.1.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"
@@ -63,7 +60,7 @@ spec:
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
-          imagePullPolicy: Always
+          imagePullPolicy: "IfNotPresent"
           securityContext:
             privileged: true
           volumeMounts:
@@ -75,6 +72,7 @@ spec:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election=true"
+            - "--retry-interval-start=500ms"
           env:
             - name: ADDRESS
               value: /csi/csi-provisioner.sock
@@ -93,6 +91,7 @@ spec:
             - "--v=5"
             - "--csiTimeout=150s"
             - "--leader-election"
+            - "--retry-interval-start=500ms"
           env:
             - name: ADDRESS
               value: unix:///csi/csi-provisioner.sock
@@ -106,7 +105,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
           # for stable functionality replace canary with latest release version
-          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.2-arm64
           args:
             - "--nodeid=$(NODE_ID)"
             - "--type=rbd"
@@ -115,9 +114,6 @@ spec:
             - "--v=5"
             - "--drivername=rbd.csi.ceph.com"
             - "--pidlimit=-1"
-                                  
-                                      
-                                         
           env:
             - name: POD_IP
               valueFrom:
@@ -147,7 +143,7 @@ spec:
             - name: keys-tmp-dir
               mountPath: /tmp/csi/keys
         - name: liveness-prometheus
-          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.2-arm64
           args:
             - "--type=liveness"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -190,4 +186,3 @@ spec:
           emptyDir: {
             medium: "Memory"
           }
----

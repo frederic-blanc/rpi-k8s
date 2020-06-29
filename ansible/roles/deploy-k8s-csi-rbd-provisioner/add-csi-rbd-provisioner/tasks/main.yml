@@ -25,15 +25,6 @@
     dest:           "files/generated/k8s-csi-rbd-storage-class.yml"
   delegate_to:      localhost
   
-- name: copy csi rbd rbac file
-  copy:
-    src:            "files/k8s-csi-rbd-rbac.yml"
-    dest:           "/root/k8s/k8s-csi-rbd-rbac.yml"
-    owner:          root
-    group:          root
-    mode:           '0644'
-  become:           true
-  
 - name: copy csi rbd storage class file
   copy:
     src:            "files/generated/k8s-csi-rbd-storage-class.yml"
@@ -43,38 +34,60 @@
     mode:           '0644'
   become:           true
   
-- name: copy csi rbd provisoner file
+- name: copy csi-provisioner-rbac file
   copy:
-    src:            "files/k8s-csi-rbd-provisioner.yml"
-    dest:           "/root/k8s/k8s-csi-rbd-provisioner.yml"
+    src:            "files/csi-provisioner-rbac.yaml"
+    dest:           "/root/k8s/k8s-csi-rbd-provisioner-rbac.yml"
     owner:          root
     group:          root
     mode:           '0644'
   become:           true
   
-- name: copy csi rbd plugin file
+- name: copy csi-nodeplugin-rbac file
   copy:
-    src:            "files/k8s-csi-rbd-plugin.yml"
+    src:            "files/csi-nodeplugin-rbac.yaml"
+    dest:           "/root/k8s/k8s-csi-rbd-nodeplugin-rbac.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
+  become:           true
+  
+- name: copy csi-rbdplugin file
+  copy:
+    src:            "files/csi-rbdplugin.yaml"
     dest:           "/root/k8s/k8s-csi-rbd-plugin.yml"
     owner:          root
     group:          root
     mode:           '0644'
   become:           true
   
-- name: apply csi rbd rbac file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-rbac.yml'"
+- name: copy csi-rbdplugin-provisioner file
+  copy:
+    src:            "files/csi-rbdplugin-provisioner.yaml"
+    dest:           "/root/k8s/k8s-csi-rbd-plugin-provisioner.yml"
+    owner:          root
+    group:          root
+    mode:           '0644'
   become:           true
   
-- name: apply csi rbd storage class file
+- name: apply csi rbd rbac file
   shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-storage-class.yml'"
   become:           true
   
+- name: apply csi rbd storage class file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-nodeplugin-rbac.yml'"
+  become:           true
+  
+- name: apply csi rbd storage class file
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-provisioner-rbac.yml'"
+  become:           true
+  
 - name: apply csi rbd provisoner file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-provisioner.yml'"
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin.yml'"
   become:           true
   
 - name: apply csi rbd plugin file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin.yml'"
+  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin-provisioner.yml'"
   become:           true
   
   

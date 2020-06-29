@@ -1,21 +1,21 @@
 ---
-kind:           DaemonSet
-apiVersion:     apps/v1
+kind: DaemonSet
+apiVersion: apps/v1
 metadata:
-  name:         csi-rbdplugin
-  namespace:    rbd-csi
+  name: csi-rbdplugin
+  namespace: rbd-csi
 spec:
   selector:
     matchLabels:
-      app:      csi-rbdplugin
+      app: csi-rbdplugin
   template:
     metadata:
       labels:
-        app:    csi-rbdplugin
+        app: csi-rbdplugin
     spec:
-      serviceAccount:   rbd-csi-nodeplugin
-      hostNetwork:      true
-      hostPID:          true
+      serviceAccount: rbd-csi-nodeplugin
+      hostNetwork: true
+      hostPID: true
       # to use e.g. Rook orchestrated cluster, and mons' FQDN is
       # resolved through k8s service, set dns policy to cluster first
       dnsPolicy: ClusterFirstWithHostNet
@@ -55,7 +55,8 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
+          # for stable functionality replace canary with latest release version
+          image: quay.io/cephcsi/cephcsi:v2.1.2-arm64
           args:
             - "--nodeid=$(NODE_ID)"
             - "--type=rbd"
@@ -111,7 +112,7 @@ spec:
         - name: liveness-prometheus
           securityContext:
             privileged: true
-          image: quay.io/cephcsi/cephcsi:v2.1.0-arm64
+          image: quay.io/cephcsi/cephcsi:v2.1.2-arm64
           args:
             - "--type=liveness"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -171,13 +172,13 @@ spec:
           }
 ---
 # This is a service to expose the liveness metrics
-apiVersion:     v1
-kind:           Service
+apiVersion: v1
+kind: Service
 metadata:
-  name:         csi-metrics-rbdplugin
-  namespace:    rbd-csi
+  name: csi-metrics-rbdplugin
+  namespace: rbd-csi
   labels:
-    app:        csi-metrics
+    app: csi-metrics
 spec:
   ports:
     - name: http-metrics
@@ -186,4 +187,3 @@ spec:
       targetPort: 8680
   selector:
     app: csi-rbdplugin
----
