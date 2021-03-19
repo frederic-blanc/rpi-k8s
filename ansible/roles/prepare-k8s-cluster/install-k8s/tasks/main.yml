@@ -73,7 +73,7 @@
   register:         network_dependencies
   become:           true
   
-## after ubuntu 19.0X only
+## before ubuntu 19.0X only
 #- name: use __tables-legacy (needed for the network plugin to work on debian:buster)
 #  alternatives:
 #    name: "{{ item }}"
@@ -95,7 +95,7 @@
   register:     bridge_nf_call_iptables
   become:       true
   
-## Kubeproxy change it at run with a calculated value
+## Kubeproxy change it at runtime with a calculated value
 #- name: set net.netfilter.nf_conntrack_max to 1000000 (needed for network plugins)
 #  sysctl:
 #    name:       "net.netfilter.nf_conntrack_max"
