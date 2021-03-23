@@ -14,7 +14,7 @@ chpasswd:
   list:
   - ubuntu:ubuntu
 
-package_update: false
+package_update:  false
 package_upgrade: false
 
 #resize_rootfs: false

@@ -105,7 +105,7 @@
     force_apt_get:  yes
     install_recommends: no
   notify:
-    - docker status
+  - docker restart
   become:           true
   
 - name: Ensures /etc/docker dir exists
@@ -115,6 +115,8 @@
     owner:          root
     group:          root
     mode:           '0755'
+  notify:
+  - docker restart
   become:           true
   
 - name: Copy docker daemon.json on server to /etc/docker
@@ -124,26 +126,23 @@
     owner:          root
     group:          docker
     mode:           '0644'
-  register:         daemon
+  notify:
+  - docker restart
   become:           true
   
-- name: restart service docker
+- name: ensure service docker is not masked and enable
   systemd:
-    state:          restarted
-    daemon_reload:  yes
     name:           docker
-  when:             daemon.changed
-  notify:
-  - docker status
-  become: true
+    masked:         false
+    enabled:        true
+    daemon_reload:  true
+  become:           true
   
-- name: ensure service docker is started and enable
+- name: ensure service docker is started
   systemd:
     name:           docker
     state:          started
-    enabled:        true
-  notify:
-  - docker status
+  register:         docker_start
   become:           true
   
 # add docker group to work_users

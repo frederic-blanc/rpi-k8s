@@ -1,6 +1,8 @@
 ---
-- name: docker status
+- name: docker restart
   service: 
-    name:  docker
-    state: started
+    name:   docker
+    state:  restarted
+  when:     docker_start is not changed
+  become:   true
   

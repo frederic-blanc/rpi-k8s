@@ -69,9 +69,7 @@
     
   - name: download latest ingress-nginx version
     get_url:
-      url:         "https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml"
-      ## to be tested
-      #url:         "https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml"
+      url:         "https://raw.githubusercontent.com/kubernetes/ingress-nginx/{{ ingress_nginx_tag }}/deploy/static/mandatory.yaml"
       dest:         "{{ build_tmp_dir.path }}/k8s-ingress-nginx.yml"
       force:        true
     changed_when:   false

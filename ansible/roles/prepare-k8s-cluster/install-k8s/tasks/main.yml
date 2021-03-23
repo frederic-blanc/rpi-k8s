@@ -1,10 +1,10 @@
 ---
 # docker service must be started
-- name: start service docker
+- name: ensure service docker is started
   systemd:
-    state: started
-    name:  docker
-  become: true
+    state:  started
+    name:   docker
+  become:   true
   
 # Install k8s repository
 - name: Install package to manage access to https repositories
@@ -153,7 +153,7 @@
       - kubectl
       - kubernetes-cni
   notify:
-  - kubelet status
+  - kubelet restart
   become: true
   
 - name: Configure default kubelet ip
@@ -161,25 +161,22 @@
     path:   "/etc/default/kubelet"
     line:   "KUBELET_EXTRA_ARGS='--node-ip={{ ansible_default_ipv4.address }} --cgroup-driver={{ docker.cgroupdriver }}'"
     create: yes
-  register: kubelet_default
+  notify:
+  - kubelet restart
   become: true
   
-- name: restart service kubelet
+- name: ensure service kubelet is not masked and enable
   systemd:
-    state: restarted
-    daemon_reload: yes
-    name:  kubelet
-  when: kubelet_default.changed
-  notify:
-  - kubelet status
-  become: true
+    name:           kubelet
+    masked:         false
+    enabled:        true
+    daemon_reload:  true
+  become:           true
   
-- name: ensure service kubelet is started and enable
+- name: ensure service kubelet is started
   systemd:
-    name:    kubelet
-    state:   started
-    enabled: yes
-  notify:
-  - kubelet status
-  become: true
+    name:           kubelet
+    state:          started
+  register:         kubelet_start
+  become:           true
   

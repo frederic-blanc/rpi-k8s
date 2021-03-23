@@ -10,7 +10,7 @@
 #############################
 - name: download latest dashboard-ui version
   get_url:
-    url:        "https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended.yaml"
+    url:        "https://raw.githubusercontent.com/kubernetes/dashboard/{{ dashboard_ui_tag }}/aio/deploy/recommended.yaml"
     dest:       "files/generated/k8s-dashboard-ui.yml"
     force:      true
   delegate_to:  localhost

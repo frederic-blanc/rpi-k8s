@@ -1,6 +1,8 @@
 ---
-- name: kubelet status
+- name: kubelet restart
   service: 
-    name:  kubelet
-    state: started
+    name:   kubelet
+    state:  restarted
+  when:     kubelet_start is not changed
+  become:   true
   

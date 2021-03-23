@@ -1,0 +1,1 @@
+usb-storage.quirks=174c:1153:u net.ifnames=0 dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=PARTUUID=19780121-02 rootfstype=ext4 elevator=deadline rootwait fixrtc

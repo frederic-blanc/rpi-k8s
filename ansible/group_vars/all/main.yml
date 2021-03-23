@@ -22,7 +22,6 @@ useful_tools:
 
 firmware_release:   "stable"
 
-
 # users and passwords should be defined in a vault or a plain text file or just here as follow:
 #####################################
 # work_users:
@@ -39,7 +38,7 @@ firmware_release:   "stable"
 prompts:
   user: '\[\033[38;5;22m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;3m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
   root: '\[\033[38;5;1m\]\u@\h:\[$(tput sgr0)\]\[\033[38;5;27m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\\$ \[$(tput sgr0)\]'
-
+  
 certificate_authority:
   CN: 'Yggdrasil Certificate Authority'
   ST: 'MIDGARD'
@@ -70,7 +69,7 @@ k8s:
 ceph:
   net_mask:             "192.168.1.0/24"
   cluster_name:         "ceph"
-  osd_drive:            "/dev/sda"
+  osd_drive:            "/dev/sdb"
   
   # Less     than   5 OSDs set pg_num to  128
   # Between  5 and 10 OSDs set pg_num to  512

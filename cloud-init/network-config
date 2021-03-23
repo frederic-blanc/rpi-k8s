@@ -11,5 +11,6 @@ ethernets:
     dhcp4:    false
     optional: false
     addresses:
-    - 192.168.1.21/24
+    - 192.168.1.24/24
     gateway4: 192.168.1.1
+    
