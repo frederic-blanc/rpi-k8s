@@ -1,69 +1,73 @@
 ---
-- name: Ensures files/generated dir exists on controller
-  file: 
-      path:     "files/generated"
-      state:    directory
-  delegate_to:  localhost
-
+- name: Ensures /root/k8s dir exists
+  file:
+    path:           "/root/k8s"
+    state:          directory
+    owner:          root
+    group:          root
+    mode:           '0755'
+  become:           true
+  
 #############################
 ##       dashboard UI      ##
 #############################
-- name: download latest dashboard-ui version
-  get_url:
-    url:        "https://raw.githubusercontent.com/kubernetes/dashboard/{{ dashboard_ui_tag }}/aio/deploy/recommended.yaml"
-    dest:       "files/generated/k8s-dashboard-ui.yml"
-    force:      true
-  delegate_to:  localhost
+- name: deploy dashboard-ui
+  block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       dashboard_ui
+    register:       dashboard_ui_tmp_dir
+    changed_when:   false
+    
+  - name: download dashboard-ui file
+    get_url:
+      url:          "https://raw.githubusercontent.com/kubernetes/dashboard/{{ dashboard_ui_tag }}/aio/deploy/recommended.yaml"
+      dest:         "{{ dashboard_ui_tmp_dir.path }}/k8s-dashboard-ui.yml"
+      force:        true
+    changed_when:   false
+    
+  - name: copy dashboard-ui file to /root/k8s
+    copy: 
+      remote_src:   yes
+      src:          "{{ dashboard_ui_tmp_dir.path }}/k8s-dashboard-ui.yml"
+      dest:         "/root/k8s"
+      owner:        root
+      group:        root
+      mode:         '0644'
+    
+  - name: denerate dashboard-ui ext (user account)
+    template:
+      src:          "k8s-dashboard-ui-ext.j2"
+      dest:         "/root/k8s/k8s-dashboard-ui-ext.yml"
+      owner:        root
+      group:        root
+      mode:         '0644'
+    
+  - name: apply dashboard-ui file
+    shell:          "kubectl apply -f '/root/k8s/k8s-dashboard-ui.yml'"
+    
+  - name: apply dashboard-ui ext file
+    shell:          "kubectl apply -f '/root/k8s/k8s-dashboard-ui-ext.yml'"
+    
+  always:
+  - name: delete temporary folder
+    file:
+      path:         "{{ dashboard_ui_tmp_dir.path }}"
+      state:        absent
+    when:           dashboard_ui_tmp_dir is defined
+    changed_when:   false
   
-- name: copy dashboard-ui ext (user account) on host
-  template:
-    src:        "k8s-dashboard-ui-ext.j2"
-    dest:       "files/generated/k8s-dashboard-ui-ext.yml"
-  delegate_to:  localhost
-  
-- name: Ensures /root/k8s dir exists on controller
-  file: 
-    path:       "/root/k8s"
-    state:      directory
-    owner:      root
-    group:      root
-    mode:       '0755'
-  become:       true
-  
-- name: copy dashboard-ui file on host
-  copy:
-    src:        "files/generated/k8s-dashboard-ui.yml"
-    dest:       "/root/k8s/k8s-dashboard-ui.yml"
-    owner:      root
-    group:      root
-    mode:       '0644'
-  become:       true
-  
-- name: copy dashboard-ui ext (user account) on host
-  copy:
-    src:        "files/generated/k8s-dashboard-ui-ext.yml"
-    dest:       "/root/k8s/k8s-dashboard-ui-ext.yml"
-    owner:      root
-    group:      root
-    mode:       '0644'
-  become: true
-  
-- name: apply dashboard-ui file
-  shell:        "kubectl apply -f '/root/k8s/k8s-dashboard-ui.yml'"
-  become:       true
-  
-- name: apply dashboard-ui ext file
-  shell:        "kubectl apply -f '/root/k8s/k8s-dashboard-ui-ext.yml'"
-  become:       true
+  become:           true
   
 - name: generate dashboard-ui admin token
-  shell:        "kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')"
-  register:     admin_token
-  become:       true
+  shell:            "kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')"
+  register:         admin_token
+  become:           true
   
-- name: Copy admin token to local file
+- name: Copy admin token file to controller file
   copy:
-    content:    "{{ admin_token.stdout }}" 
-    dest:       "files/generated/dashboard-ui-token.txt"
-  delegate_to:  localhost
+    content:        "{{ admin_token.stdout }}" 
+    dest:           "files/generated/dashboard-ui-token.txt"
+  delegate_to:      localhost
   

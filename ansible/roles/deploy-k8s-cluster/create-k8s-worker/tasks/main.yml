@@ -1,17 +1,4 @@
 ---
-- name: Ensures files/generated dir exists on controller
-  file: 
-      path:     "files/generated"
-      state:    directory
-  delegate_to:  localhost
-  
-- name: Copy the join command to server location
-  copy: 
-    src:        "files/generated/k8s-cluster-attach-self.sh"
-    dest:       "/tmp/k8s-cluster-attach-self.sh"
-    mode:       0700
-  become:       true
-  
 - name: kubernetes with calico  network plugin config
   block:
   - name: ensure /etc/NetworkManager/conf.d exists
@@ -37,26 +24,12 @@
     systemd:
       name:     systemd-networkd
       state:    restarted
-    when:       networking_exception_for_calico.changed
+    when:       networking_exception_for_calico is changed
   
-  become: true
-  when: k8s.network_plugin == 'calico'
+  become:       true
+  when:         k8s.network_plugin == 'calico'
   
 - name: attach the node to cluster
-  command:      "sh /tmp/k8s-cluster-attach-self.sh"
+  shell:        "{{ attach_self }}"
   become:       true
-  
-- name: delete join command file
-  file: 
-    path:       "/tmp/k8s-cluster-attach-self.sh"
-    state:      absent
-  become:       true
-  
-- name: Copy label node command to local file
-  lineinfile:
-    line:       "kubectl label node {{ hostname }} node-role.kubernetes.io/worker=worker --overwrite"
-    create:     yes
-    state:      present
-    path:       "files/generated/k8s-cluster-label-node-{{ hostname }}.sh"
-  delegate_to:  localhost
   

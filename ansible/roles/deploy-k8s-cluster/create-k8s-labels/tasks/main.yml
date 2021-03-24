@@ -1,29 +1,6 @@
 ---
-- name: Find files/generated files with pattern "*-label-node-k8s-cluster.sh"
-  find:
-    paths:      "files/generated"
-    patterns:   "k8s-cluster-label-node-*.sh"
-  register:     label_node_scripts
-  delegate_to:  localhost
-  
-- name: copy and execute label node scripts
-  block:
-  - name: Copy the label node command to server location
-    copy: 
-      src:      "{{ item.path }}"
-      dest:     "/tmp/{{ item.path | basename }}"
-      mode:     0700
-    with_items: "{{ label_node_scripts.files }}"
-    
-  - name: set workers type
-    command:    "sh /tmp/{{ item.path | basename }}"
-    with_items: "{{ label_node_scripts.files }}"
-    
-  - name: remove the label node command to server location
-    file: 
-      path:     "/tmp/{{ item.path | basename }}"
-      state:    absent
-    with_items: "{{ label_node_scripts.files }}"
-  
+- name: Copy label node command to local file
+  shell:        "kubectl label node {{ item }} node-role.kubernetes.io/worker=worker --overwrite"
+  with_items:   "{{ hostvars['worker'] | map(attribute='hostname') | list }}"
   become:       true
   
