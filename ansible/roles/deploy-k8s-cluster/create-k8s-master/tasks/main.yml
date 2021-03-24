@@ -71,18 +71,26 @@
   become:           true
   
 - name: kubernetes with flannel network plugin installation
-  block: 
+  block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       flannel
+    register:       flannel_tmp_dir
+    changed_when:   false
+    
   - name: download latest flannel pod network version
     get_url:
       url:          "https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
-      dest:         "files/generated/k8s-network-plugin-flannel.yml"
+      dest:         "{{ flannel_tmp_dir.path }}/k8s-network-plugin-flannel.yml"
       force:        true
-    delegate_to:    localhost
+    changed_when:   false
     
-  - name: copy flannel file on host
-    copy:
-      src:          "files/generated/k8s-network-plugin-flannel.yml"
-      dest:         "/root/k8s/k8s-network-plugin-flannel.yml"
+  - name: copy flannel plugin file to /root/k8s
+    copy: 
+      remote_src:   yes
+      src:          "{{ flannel_tmp_dir.path }}/k8s-network-plugin-flannel.yml"
+      dest:         "/root/k8s"
       owner:        root
       group:        root
       mode:         '0644'
@@ -93,11 +101,26 @@
   - name: Install flannel pod network
     shell:          "kubectl apply -f '/root/k8s/k8s-network-plugin-flannel.yml' --kubeconfig '/etc/kubernetes/admin.conf'"
     
-  become: true
-  when: k8s.network_plugin == 'flannel'
+  always:
+  - name: delete temporary folder
+    file:
+      path:         "{{ flannel_tmp_dir.path }}"
+      state:        absent
+    when:           flannel_tmp_dir is defined
+    changed_when:   false
+  
+  become:           true
+  when:             k8s.network_plugin == 'flannel'
 
 - name: kubernetes with weave   network plugin installation
   block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       weave
+    register:       weave_tmp_dir
+    changed_when:   false
+    
   - name: get kubectl version
     shell:          "kubectl version | base64 | tr -d '\n'"
     register:       kubectl_version
@@ -106,14 +129,15 @@
   - name: download latest weave pod network version
     get_url:
       url:          "https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout }}&env.WEAVE_MTU=8912"
-      dest:         "files/generated/k8s-network-plugin-weave.yml"
+      dest:         "{{ weave_tmp_dir.path }}/k8s-network-plugin-weave.yml"
       force:        true
-    delegate_to:    localhost
+    changed_when:   false
     
-  - name: copy weave file on host
+  - name: copy weave file to /root/k8s
     copy:
-      src:          "files/generated/k8s-network-plugin-weave.yml"
-      dest:         "/root/k8s/k8s-network-plugin-weave.yml"
+      remote_src:   yes
+      src:          "{{ weave_tmp_dir.path }}/k8s-network-plugin-weave.yml"
+      dest:         "/root/k8s"
       owner:        root
       group:        root
       mode:         '0644'
@@ -124,21 +148,37 @@
   - name: Install weave pod network
     shell:          "kubectl apply -f '/root/k8s/k8s-network-plugin-weave.yml' --kubeconfig '/etc/kubernetes/admin.conf'"
     
-  become: true
-  when: k8s.network_plugin == 'weave'
+  always:
+  - name: delete temporary folder
+    file:
+      path:         "{{ weave_tmp_dir.path }}"
+      state:        absent
+    when:           weave_tmp_dir is defined
+    changed_when:   false
+  
+  become:           true
+  when:             k8s.network_plugin == 'weave'
 
 - name: kubernetes with calico  network plugin installation
-  block:  
+  block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       calico
+    register:       calico_tmp_dir
+    changed_when:   false
+    
   - name: download latest calico pod network version
     get_url:
       url:          "https://docs.projectcalico.org/manifests/calico.yaml"
-      dest:         "files/generated/k8s-network-plugin-calico.yml"
+      dest:         "{{ calico_tmp_dir.path }}/k8s-network-plugin-calico.yml"
       force:        true
-    delegate_to:    localhost
+    changed_when:   false
     
-  - name: copy calico file on host
+  - name: copy calico file to /root/k8s
     copy:
-      src:          "files/generated/k8s-network-plugin-calico.yml"
+      remote_src:   yes
+      src:          "{{ calico_tmp_dir.path }}/k8s-network-plugin-calico.yml"
       dest:         "/root/k8s/k8s-network-plugin-calico.yml"
       owner:        root
       group:        root
@@ -146,11 +186,11 @@
       
   - name: ensure /etc/NetworkManager/conf.d exists
     file:
-      dest:       /etc/NetworkManager/conf.d
-      state:      directory
-      owner:      root
-      group:      root
-      mode:       '0755'
+      dest:         /etc/NetworkManager/conf.d
+      state:        directory
+      owner:        root
+      group:        root
+      mode:         '0755'
     
   - name: Create networking exception for calico
     copy:
@@ -167,7 +207,7 @@
     systemd:
       name:         systemd-networkd
       state:        restarted
-    when:           networking_exception_for_calico.changed
+    when:           networking_exception_for_calico is changed
     
   - name: Initialize the Kubernetes cluster using kubeadm
     shell:          "kubeadm init --apiserver-advertise-address='{{ ansible_default_ipv4.address }}' --node-name '{{ hostname }}' --cert-dir '/etc/kubernetes/pki' --pod-network-cidr='{{ k8s.calico.cidr }}'"
@@ -175,8 +215,16 @@
   - name: Install calico pod network
     shell:          "kubectl apply -f '/root/k8s/k8s-network-plugin-calico.yml' --kubeconfig '/etc/kubernetes/admin.conf'"
     
-  become: true
-  when: k8s.network_plugin == 'calico'
+  always:
+  - name: delete temporary folder
+    file:
+      path:         "{{ calico_tmp_dir.path }}"
+      state:        absent
+    when:           calico_tmp_dir is defined
+    changed_when:   false
+  
+  become:           true
+  when:             k8s.network_plugin == 'calico'
 
 - name: Ensures .kube dir exists for root
   file: 
