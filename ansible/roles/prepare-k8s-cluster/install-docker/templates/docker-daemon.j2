@@ -1,9 +1,0 @@
-{
-  "exec-opts": ["native.cgroupdriver={{ docker.cgroupdriver }}"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "max-concurrent-uploads": {{ docker.concurrent_uploads }},
-  "storage-driver":        "{{ docker.storage_driver }}"
-}

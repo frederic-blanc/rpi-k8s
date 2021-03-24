@@ -1,0 +1,15 @@
+[submodule "ansible/roles/prepare-k8s-cluster/prepare-network"]
+	path = ansible/roles/prepare-k8s-cluster/prepare-network
+	url = https://github.com/frederic-blanc/rpi-ansible-role_prepare-network
+[submodule "ansible/roles/prepare-k8s-cluster/prepare-system"]
+	path = ansible/roles/prepare-k8s-cluster/prepare-system
+	url = https://github.com/frederic-blanc/rpi-ansible-role_prepare-system
+[submodule "ansible/roles/prepare-k8s-cluster/prepare-users"]
+	path = ansible/roles/prepare-k8s-cluster/prepare-users
+	url = https://github.com/frederic-blanc/rpi-ansible-role_prepare-users
+[submodule "ansible/roles/prepare-k8s-cluster/lock-ubuntu-user"]
+	path = ansible/roles/prepare-k8s-cluster/lock-ubuntu-user
+	url = https://github.com/frederic-blanc/rpi-ansible-role_lock-ubuntu-user
+[submodule "ansible/roles/prepare-k8s-cluster/install-docker"]
+	path = ansible/roles/prepare-k8s-cluster/install-docker
+	url = https://github.com/frederic-blanc/rpi-ansible-role_install-docker
