@@ -271,7 +271,8 @@
   register:         join_command
   become:           true
   
-- name: Copy join command to local file
-  set_fact:
-    attach_self:    "{{ join_command.stdout_lines[0] }}" 
+- name: declare attach_self command in dummy host
+  add_host:
+    name:               "dummy"
+    attach_self_cmd:    "{{ join_command.stdout_lines[0] }}" 
   

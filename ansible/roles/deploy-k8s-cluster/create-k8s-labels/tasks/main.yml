@@ -1,6 +1,6 @@
 ---
-- name: Copy label node command to local file
-  shell:        "kubectl label node {{ item }} node-role.kubernetes.io/worker=worker --overwrite"
-  with_items:   "{{ hostvars['worker'] | map(attribute='hostname') | list }}"
+- name: set worker nodes' label to worker
+  shell:        "kubectl label node {{ hostvars[item].hostname }} node-role.kubernetes.io/worker=worker --overwrite"
+  with_items:   "{{ groups['worker'] }}"
   become:       true
   

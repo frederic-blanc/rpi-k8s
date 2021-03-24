@@ -3,33 +3,37 @@
   block:
   - name: ensure /etc/NetworkManager/conf.d exists
     file:
-      dest:     "/etc/NetworkManager/conf.d"
-      state:    directory
-      owner:    root
-      group:    root
-      mode:     '0755'
+      dest:             "/etc/NetworkManager/conf.d"
+      state:            directory
+      owner:            root
+      group:            root
+      mode:             '0755'
     
   - name: Create networking exception for calico
     copy:
-      dest:     "/etc/NetworkManager/conf.d/calico.conf"
-      content:  |
+      dest:             "/etc/NetworkManager/conf.d/calico.conf"
+      content:          |
         [keyfile]
         unmanaged-devices=interface-name:cali*;interface-name:tunl*
-      owner:    root
-      group:    root
-      mode:     '0644'
-    register:   networking_exception_for_calico
+      owner:            root
+      group:            root
+      mode:             '0644'
+    register:           networking_exception_for_calico
     
   - name: restart service networkd
     systemd:
-      name:     systemd-networkd
-      state:    restarted
-    when:       networking_exception_for_calico is changed
+      name:             systemd-networkd
+      state:            restarted
+    when:               networking_exception_for_calico is changed
   
-  become:       true
-  when:         k8s.network_plugin == 'calico'
+  become:               true
+  when:                 k8s.network_plugin == 'calico'
+  
+- name: declare attach_self_cmd var from dummy host
+  set_fact:         
+    attach_self_cmd:    "{{ hostvars['dummy'].attach_self_cmd }}"
   
 - name: attach the node to cluster
-  shell:        "{{ attach_self }}"
-  become:       true
+  shell:                "{{ attach_self_cmd }}"
+  become:               true
   
