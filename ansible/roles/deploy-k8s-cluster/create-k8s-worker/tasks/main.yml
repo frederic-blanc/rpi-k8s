@@ -29,11 +29,31 @@
   become:               true
   when:                 k8s.network_plugin == 'calico'
   
-- name: declare attach_self_cmd var from dummy host
-  set_fact:         
-    attach_self_cmd:    "{{ hostvars['dummy'].attach_self_cmd }}"
-  
-- name: attach the node to cluster
-  shell:                "{{ attach_self_cmd }}"
-  become:               true
+- name: execute join command
+  block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       join
+    register:       join_tmp_dir
+    changed_when:   false
+    
+  - name: Copy the join command
+    copy: 
+      src:          "files/generated/k8s-cluster-attach-self.sh"
+      dest:         "{{ join_tmp_dir.path }}"
+      mode:         0700
+    changed_when:   false
+    
+  - name: attach the node to cluster
+    shell:          "sh {{ join_tmp_dir.path }}/k8s-cluster-attach-self.sh"
+    become:         true
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:         "{{ join_tmp_dir.path }}"
+      state:        absent
+    when:           join_tmp_dir is defined
+    changed_when:   false
   

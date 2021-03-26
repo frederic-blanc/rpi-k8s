@@ -36,7 +36,7 @@
       group:        root
       mode:         '0644'
     
-  - name: denerate dashboard-ui ext (user account)
+  - name: generate dashboard-ui ext (user account)
     template:
       src:          "k8s-dashboard-ui-ext.j2"
       dest:         "/root/k8s/k8s-dashboard-ui-ext.yml"
@@ -67,7 +67,7 @@
   
 - name: Copy admin token file to controller file
   copy:
-    content:        "{{ admin_token.stdout }}" 
+    content:        "{{ admin_token.stdout_lines | select ('match','^token: ') | first | regex_search('^token:\\s+([^\\s]+)$', '\\1') | first }}"
     dest:           "files/generated/dashboard-ui-token.txt"
   delegate_to:      localhost
   
