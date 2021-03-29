@@ -19,75 +19,92 @@
   set_fact:
     ceph_k8s_key:   "{{ ceph_auth_key_command.stdout }}"
   
-- name: Generate storage class file on local
-  template:
-    src:            "k8s-csi-rbd-storage-class.j2"
-    dest:           "files/generated/k8s-csi-rbd-storage-class.yml"
-  delegate_to:      localhost
-  
-- name: copy csi rbd storage class file
-  copy:
-    src:            "files/generated/k8s-csi-rbd-storage-class.yml"
-    dest:           "/root/k8s/k8s-csi-rbd-storage-class.yml"
+- name: Ensures /root/k8s dir exists
+  file: 
+    path:           "/root/k8s"
+    state:          directory
     owner:          root
     group:          root
-    mode:           '0644'
+    mode:           '0755'
   become:           true
   
-- name: copy csi-provisioner-rbac file
-  copy:
-    src:            "files/csi-provisioner-rbac.yaml"
-    dest:           "/root/k8s/k8s-csi-rbd-provisioner-rbac.yml"
-    owner:          root
-    group:          root
-    mode:           '0644'
-  become:           true
+- name: Build csi rdb provisioner deployment files
+  block:
+  - name: create temporary folder
+    tempfile:
+      state:        directory
+      suffix:       csi
+    register:       csi_tmp_dir
+    changed_when:   false
+    
+  - name: Generate ceph-csi storage class file
+    template:
+      src:          "k8s-csi-rbd-storage-class.yml.j2"
+      dest:         "/root/k8s/k8s-csi-rbd-storage-class.yml"
+    
+  - name: download ceph-csi deployment files
+    get_url:
+      url:          "https://raw.githubusercontent.com/ceph/ceph-csi/v{{ ceph_csi_version }}/{{ item }}"
+      dest:         "{{ csi_tmp_dir.path }}/{{ item }}.origin"
+      force:        true
+    with_items:     "{{ ceph_csi_files }}"
+    changed_when:   false
+    
+  - name: add namespace to ceph-csi deployment files
+    shell:  |
+        awk -v  namespace='{{ namespace }}'                 \
+               'BEGIN {m=0; n=0;}                           \
+                {                                           \
+                    p=1;                                    \
+                    if ( $0 ~ /^metadata:/ ) {              \
+                        m=1; n=0;                           \
+                    }                                       \
+                    else if (m && $0 ~ /^[^ ]/ ) {          \
+                        if (m && !n) {                      \
+                            print "  namespace:",namespace; \
+                        }                                   \
+                        m=0; n=0;                           \
+                    }                                       \
+                    if ( $0 ~ /^  namespace:/ ) {           \
+                        print "  namespace:",namespace;     \
+                        p=0; n=1;                           \
+                    } else if ($0 ~ /^    namespace:/ ) {   \
+                        print "    namespace:",namespace;   \
+                        p=0;                                \
+                    }                                       \
+                }p;                                         \
+                END {                                       \
+                    if (m && !n) {                          \
+                        print "  namespace:",namespace;     \
+                    }                                       \
+                }' {{ csi_tmp_dir.path }}/{{ item | basename }}.origin > {{ csi_tmp_dir.path }}/{{ item | basename }}
+    with_items:     "{{ ceph_csi_files }}"
+    changed_when:   false
+    
+  - name: copy csi rbd storage class file
+    copy:
+      remote_src:   yes
+      src:          "{{ csi_tmp_dir.path }}/{{ item | basename }}"
+      dest:         "/root/k8s/{{ item | basename }}"
+      owner:        root
+      group:        root
+      mode:         '0644'
+    with_items:     "{{ ceph_csi_files }}"
+    
+  - name: apply csi rbd rbac file
+    shell:          "kubectl apply -f '/root/k8s/k8s-csi-rbd-storage-class.yml'"
+    
+  - name: apply csi rbd storage class file
+    shell:          "kubectl apply -f '/root/k8s/{{ item | basename }}'"
+    with_items:     "{{ ceph_csi_files }}"
+    
+  always:
+  - name: delete temporary build directory
+    file:
+      path:         "{{ csi_tmp_dir.path }}"
+      state:        absent
+    when:           csi_tmp_dir is defined
+    changed_when:   false
   
-- name: copy csi-nodeplugin-rbac file
-  copy:
-    src:            "files/csi-nodeplugin-rbac.yaml"
-    dest:           "/root/k8s/k8s-csi-rbd-nodeplugin-rbac.yml"
-    owner:          root
-    group:          root
-    mode:           '0644'
   become:           true
-  
-- name: copy csi-rbdplugin file
-  copy:
-    src:            "files/csi-rbdplugin.yaml"
-    dest:           "/root/k8s/k8s-csi-rbd-plugin.yml"
-    owner:          root
-    group:          root
-    mode:           '0644'
-  become:           true
-  
-- name: copy csi-rbdplugin-provisioner file
-  copy:
-    src:            "files/csi-rbdplugin-provisioner.yaml"
-    dest:           "/root/k8s/k8s-csi-rbd-plugin-provisioner.yml"
-    owner:          root
-    group:          root
-    mode:           '0644'
-  become:           true
-  
-- name: apply csi rbd rbac file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-storage-class.yml'"
-  become:           true
-  
-- name: apply csi rbd storage class file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-nodeplugin-rbac.yml'"
-  become:           true
-  
-- name: apply csi rbd storage class file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-provisioner-rbac.yml'"
-  become:           true
-  
-- name: apply csi rbd provisoner file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin.yml'"
-  become:           true
-  
-- name: apply csi rbd plugin file
-  shell:            "kubectl apply -f '/root/k8s/k8s-csi-rbd-plugin-provisioner.yml'"
-  become:           true
-  
   
