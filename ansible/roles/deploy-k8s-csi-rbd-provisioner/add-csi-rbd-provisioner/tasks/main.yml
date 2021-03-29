@@ -81,7 +81,16 @@
     with_items:     "{{ ceph_csi_files }}"
     changed_when:   false
     
-  - name: copy csi rbd storage class file
+  - name: update ingress-nginx container image to 2 replicas
+    replace:
+      path:         "{{ csi_tmp_dir.path }}/{{ item | basename }}"
+      regexp:       "replicas: [0-9]+"
+      replace:      "replicas: {{ groups['all'] | length }}"
+    with_items:     "{{ ceph_csi_files }}"
+    when:           groups['worker'] | length < 3 
+    changed_when:   false
+    
+  - name: copy ceph-csi rbd deployment files
     copy:
       remote_src:   yes
       src:          "{{ csi_tmp_dir.path }}/{{ item | basename }}"
@@ -91,10 +100,10 @@
       mode:         '0644'
     with_items:     "{{ ceph_csi_files }}"
     
-  - name: apply csi rbd rbac file
+  - name: apply ceph-csi rbd storage class deployment file
     shell:          "kubectl apply -f '/root/k8s/k8s-csi-rbd-storage-class.yml'"
     
-  - name: apply csi rbd storage class file
+  - name: apply ceph-csi rbd deployment files
     shell:          "kubectl apply -f '/root/k8s/{{ item | basename }}'"
     with_items:     "{{ ceph_csi_files }}"
     
