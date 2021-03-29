@@ -1,2 +1,7 @@
 ---
 ceph_csi_version: "3.2.1"
+ceph_csi_files:
+- "deploy/rbd/kubernetes/csi-nodeplugin-rbac.yaml"
+- "deploy/rbd/kubernetes/csi-provisioner-rbac.yaml"
+- "deploy/rbd/kubernetes/csi-rbdplugin.yaml"
+- "deploy/rbd/kubernetes/csi-rbdplugin-provisioner.yaml"
