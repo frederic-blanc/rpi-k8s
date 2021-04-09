@@ -1,0 +1,17 @@
+---
+- name: Ensures files/generated dir exists on controller
+  file: 
+      path:             "files/generated"
+      state:            directory
+  delegate_to:          localhost
+  
+- name: set_fact uuid from uuidgen_command
+  set_fact:
+    ceph_uuid:          "{{ 9999999999999999999999 | random | to_uuid }}"
+  
+- name: Generate ceph.conf on local
+  template:
+    src:                "ceph.j2"
+    dest:               "files/generated/ceph.conf"
+  delegate_to:          localhost
+  

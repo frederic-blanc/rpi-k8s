@@ -1,13 +1,7 @@
 ---
-- name: execute ceph mon dump command
-  shell:            "ceph mon dump --format json"
-  register:         ceph_mon_dump_command
-  changed_when:     false
-  become:           true
-  
-- name: set_fact ceph_volumes
+- name: set ceph_mon fact
   set_fact:
-    ceph_mon:       "{{ ceph_mon_dump_command.stdout | from_json }}"
+    ceph_mon:       "{{ lookup('file', 'generated/ceph_mon_dump.json') | from_json }}"
   
 - name: get k8s ceph key
   shell:            "ceph auth print-key client.{{ ceph.rbd_pool.user }}"
@@ -45,14 +39,14 @@
   - name: download ceph-csi deployment files
     get_url:
       url:          "https://raw.githubusercontent.com/ceph/ceph-csi/v{{ ceph_csi_version }}/{{ item }}"
-      dest:         "{{ csi_tmp_dir.path }}/{{ item }}.origin"
+      dest:         "{{ csi_tmp_dir.path }}/{{ item | basename }}.origin"
       force:        true
     with_items:     "{{ ceph_csi_files }}"
     changed_when:   false
     
-  - name: add namespace to ceph-csi deployment files
+  - name: add namespace to rbd-csi deployment files
     shell:  |
-        awk -v  namespace='{{ namespace }}'                 \
+        awk -v  ns='rbd-csi'                                \
                'BEGIN {m=0; n=0;}                           \
                 {                                           \
                     p=1;                                    \
@@ -61,31 +55,31 @@
                     }                                       \
                     else if (m && $0 ~ /^[^ ]/ ) {          \
                         if (m && !n) {                      \
-                            print "  namespace:",namespace; \
+                            print "  namespace:",ns;        \
                         }                                   \
                         m=0; n=0;                           \
                     }                                       \
                     if ( $0 ~ /^  namespace:/ ) {           \
-                        print "  namespace:",namespace;     \
+                        print "  namespace:",ns;            \
                         p=0; n=1;                           \
                     } else if ($0 ~ /^    namespace:/ ) {   \
-                        print "    namespace:",namespace;   \
+                        print "    namespace:",ns;          \
                         p=0;                                \
                     }                                       \
                 }p;                                         \
                 END {                                       \
                     if (m && !n) {                          \
-                        print "  namespace:",namespace;     \
+                        print "  namespace:",ns;            \
                     }                                       \
                 }' {{ csi_tmp_dir.path }}/{{ item | basename }}.origin > {{ csi_tmp_dir.path }}/{{ item | basename }}
     with_items:     "{{ ceph_csi_files }}"
     changed_when:   false
     
-  - name: update ingress-nginx container image to 2 replicas
+  - name: update container image to 2 replicas
     replace:
       path:         "{{ csi_tmp_dir.path }}/{{ item | basename }}"
       regexp:       "replicas: [0-9]+"
-      replace:      "replicas: {{ groups['all'] | length }}"
+      replace:      "replicas: {{ groups['worker'] | length }}"
     with_items:     "{{ ceph_csi_files }}"
     when:           groups['worker'] | length < 3 
     changed_when:   false

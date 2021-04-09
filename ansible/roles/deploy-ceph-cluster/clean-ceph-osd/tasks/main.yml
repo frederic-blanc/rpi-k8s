@@ -1,22 +1,44 @@
 ---
-## until service_facts works on ubuntu 20.04
+# not working for ubuntu 20.04
 #- name: populate service facts
 #  service_facts:
-#  no_log:           true
-
+  
 - name: get list of services
-  shell:            "systemctl list-unit-files --no-page --type=service"
-  register:         services_cmd
-  changed_when:     false
-  no_log:           true
+  shell:                "systemctl list-unit-files --no-page --type=service | grep ceph"
+  register:             services_cmd
+  changed_when:         false
+  no_log:               true
   
 - name: create services list
   set_fact:
-    services_list:  "{{ ( services_cmd.stdout_lines | map('regex_replace', '^(.*\\.service) .*$', '\\1') | list )[1:-2] }}"
+    services_list:      "{{ ( services_cmd.stdout_lines | map('regex_replace', '^(.*\\.service) .*$', '\\1') | list ) }}"
   
 - name: create services dict
   set_fact:
-    services:       "{{ dict( services_list | zip( services_list )) }}"
+    services:           "{{ dict( services_list | zip( services_list )) }}"
+  
+- name: execute ceph volume data command
+  shell:                "ceph-volume lvm list --format json"
+  register:             ceph_volumes_command
+  changed_when:         false
+  failed_when:          false
+  become:               true
+  
+- name: create ceph_volumes dict
+  set_fact:
+    ceph_volumes:       "{{ (ceph_volumes_command.stdout | from_json).values() | flatten | map(attribute='tags') | flatten | list }}"
+  when:                 ceph_volumes_command.rc == 0
+  
+- name: stop and disable osd services if exist
+  systemd:
+    name:               "ceph-osd@{{ item['ceph.osd_id'] }}.service"
+    state:              stopped
+    enabled:            false
+  with_items:       "{{ ceph_volumes }}"
+  when:
+  - "'ceph-osd@.service'    in services.keys()"
+  - ceph_volumes is defined
+  become:           true
   
 - name: ensure ceph base binaries is installed
   apt: 
@@ -30,14 +52,6 @@
     - "ceph-base"
     - "ceph-common"
     - "lvm2"
-  become:           true
-  
-- name: stop and disable service osd if exist
-  systemd:
-    name:           "{{ item }}"
-    state:          stopped
-    enabled:        false
-  with_items:       "{{ services.keys() | select( 'match', '^ceph-osd@[0-9]+\\.service' ) | list }}"
   become:           true
   
 ## remove ceph packages

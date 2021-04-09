@@ -27,7 +27,7 @@
     - "ceph-mds"
   become:               true
   
-- name: assigne the correct user recursively to ceph folders
+- name: assign the correct user recursively to ceph folders
   file:
     path:               "{{ item }}"
     state:              directory
@@ -38,16 +38,6 @@
   - "/var/lib/ceph"
   - "/etc/ceph"
   become:               true
-  
-- name: set_fact uuid from uuidgen_command
-  set_fact:
-    ceph_uuid:          "{{ 9999999999999999999999 | random | to_uuid }}"
-  
-- name: Generate ceph.conf on local
-  template:
-    src:                "ceph.j2"
-    dest:               "files/generated/ceph.conf"
-  delegate_to:          localhost
   
 - name: copy ceph conf file on host
   copy:
@@ -137,11 +127,26 @@
   become:               true
   become_user:          ceph
   
-- name: start and enable ceph mon service
+- name: disable MemoryDenyWriteExecute in ceph-mon service file
+  lineinfile:
+    path:               "/lib/systemd/system/ceph-mon@.service"
+    regexp:             "^#?\\s*MemoryDenyWriteExecute=.*"
+    line:               "MemoryDenyWriteExecute=false"
+    create:             no
+  become:               true
+  
+- name: enable ceph mon service
+  systemd:
+    name:               "ceph-mon@{{ hostname }}"
+    masked:             false
+    enabled:            true
+    daemon_reload:      true
+  become:               true
+  
+- name: start ceph mon service
   systemd:
     name:               "ceph-mon@{{ hostname }}"
     state:              started
-    enabled:            true
   become:               true
   
 - name: enable mon enable-msgr2
@@ -170,11 +175,26 @@
   become:               true
   become_user:          ceph
   
-- name: start and enable ceph mgr service
+- name: disable MemoryDenyWriteExecute in ceph-mgr service file
+  lineinfile:
+    path:               "/lib/systemd/system/ceph-mgr@.service"
+    regexp:             "^#?\\s*MemoryDenyWriteExecute=.*"
+    line:               "MemoryDenyWriteExecute=false"
+    create:             no
+  become:               true
+  
+- name: enable ceph mgr service
+  systemd:
+    name:               "ceph-mgr@{{ hostname }}"
+    masked:             false
+    enabled:            true
+    daemon_reload:      true
+  become:               true
+  
+- name: start ceph mgr service
   systemd:
     name:               "ceph-mgr@{{ hostname }}"
     state:              started
-    enabled:            true
   become:               true
   
 - name: create mds
@@ -201,18 +221,32 @@
   become:               true
   become_user:          ceph
   
-- name: correct ceph mds service file
-  replace:
-    path:               "/lib/systemd/system/ceph-mds@.service"
-    regexp:             '^ExecStart=(.*) --setuser ceph --setgroup ceph$'
-    replace:            'ExecStart=\1 --setuser ceph --setgroup ceph -m %i:6789'
-  become: true
+#- name: correct ceph-mds service file
+#  replace:
+#    path:               "/lib/systemd/system/ceph-mds@.service"
+#    regexp:             '^ExecStart=(.*) --setuser ceph --setgroup ceph$'
+#    replace:            'ExecStart=\1 --setuser ceph --setgroup ceph -m %i:6789'
+#  become: true
   
-- name: start and enable ceph mds service
+- name: disable MemoryDenyWriteExecute in ceph-mds service file
+  lineinfile:
+    path:               "/lib/systemd/system/ceph-mds@.service"
+    regexp:             "^#?\\s*MemoryDenyWriteExecute=.*"
+    line:               "MemoryDenyWriteExecute=false"
+    create:             no
+  become:               true
+  
+- name: enable ceph mds service
+  systemd:
+    name:               "ceph-mds@{{ hostname }}"
+    masked:             false
+    enabled:            true
+    daemon_reload:      true
+  become:               true
+  
+- name: start ceph mds service
   systemd:
     name:               "ceph-mds@{{ hostname }}"
     state:              started
-    daemon_reload:      yes
-    enabled:            true
   become:               true
   

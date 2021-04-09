@@ -1,7 +1,11 @@
 ---
 - name: add csi rbd provisioner
-  hosts: master
+  hosts: ceph_master
   roles:
   - deploy-k8s-csi-rbd-provisioner/create-rbd-pool
+  
+- name: add csi rbd provisioner
+  hosts: master
+  roles:
   - deploy-k8s-csi-rbd-provisioner/add-csi-rbd-provisioner
   

@@ -32,3 +32,14 @@
   become:           true
   become_user:      ceph
   
+- name: retrieve ceph mon data
+  shell:            "ceph mon dump --format json"
+  register:         dump_command
+  become:           true
+  
+- name: Copy join command to local file
+  copy:
+    content:        "{{ dump_command.stdout }}" 
+    dest:           "files/generated/ceph_mon_dump.json"
+  delegate_to:      localhost
+  

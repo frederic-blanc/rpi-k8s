@@ -62,28 +62,32 @@
 - name: create osd logical volume and volume group
   block:
   - name: wipe drive
-    shell:              "wipefs --all --force  {{ ceph.osd_drive }}"
+    shell:              "wipefs --all --force  {{ item }}"
+    with_items:         "{{ ceph.osd_drives }}"
     
   - name: make sure that first octets are clean
-    shell:              "dd if=/dev/zero    of={{ ceph.osd_drive }} bs=1M bs=446 count=1"
+    shell:              "dd if=/dev/zero    of={{ item }} bs=1M bs=446 count=1"
+    with_items:         "{{ ceph.osd_drives }}"
     
   - name: create primary partition
-    shell:              "echo '2048,,,' | sfdisk {{ ceph.osd_drive }}"
+    shell:              "echo '2048,,,' | sfdisk {{ item }}"
+    with_items:         "{{ ceph.osd_drives }}"
     
   become: true
   
-- name: set_fact uniq ceph vg name
-  set_fact:
-    ceph_vgname:        "ceph-{{ 9999999999999999999999 | random | to_uuid }}"
-    
-- name: Create a ceph unique volume group (bug in ceph-volume, when it not exists)
-  lvg:
-    vg:                 "{{ ceph_vgname }}"
-    pvs:                "{{ ceph.osd_drive }}1"
-  become: true
+#- name: set_fact uniq ceph vg name
+#  set_fact:
+#    ceph_vgname:        "ceph-{{ 9999999999999999999999 | random | to_uuid }}"
+#    
+#- name: Create a ceph unique volume group (bug in ceph-volume, when it not exists)
+#  lvg:
+#    vg:                 "{{ ceph_vgname }}"
+#    pvs:                "{{ ceph.osd_drive }}1"
+#  become: true
   
 - name: create ceph volume
-  shell:                "ceph-volume lvm prepare --data {{ ceph.osd_drive }}1"
+  shell:                "ceph-volume lvm prepare --data {{ item }}1"
+  with_items:           "{{ ceph.osd_drives }}"
   become:               true
   
 - name: execute ceph volume data command
@@ -101,12 +105,27 @@
   with_items:           "{{ ceph_volumes }}"
   become:               true
   
-- name: restart and enable ceph osd service
+- name: disable MemoryDenyWriteExecute in ceph-osd service file
+  lineinfile:
+    path:               "/lib/systemd/system/ceph-osd@.service"
+    regexp:             "^#?\\s*MemoryDenyWriteExecute=.*"
+    line:               "MemoryDenyWriteExecute=false"
+    create:             no
+  become:               true
+  
+- name: enable ceph osd service
+  systemd:
+    name:               "ceph-osd@{{ item['ceph.osd_id'] }}"
+    masked:             false
+    enabled:            true
+    daemon_reload:      true
+  with_items:           "{{ ceph_volumes }}"
+  become:               true
+  
+- name: start ceph osd service
   systemd:
     name:               "ceph-osd@{{ item['ceph.osd_id'] }}"
     state:              restarted
-    daemon_reload:      yes
-    enabled:            true
   with_items:           "{{ ceph_volumes }}"
   become:               true
   
