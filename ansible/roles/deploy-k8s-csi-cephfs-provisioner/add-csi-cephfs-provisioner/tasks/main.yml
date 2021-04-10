@@ -3,12 +3,17 @@
   set_fact:
     ceph_mon:               "{{ lookup('file', 'generated/ceph_mon_dump.json') | from_json }}"
   
-- name: set ceph_rbd_client_key fact
+- name: set ceph_cephfs_client_key fact
   set_fact:
-    ceph_rbd_client_key:    "{{ lookup('file', 'generated/ceph_rbd_client.key') }}"
+    ceph_cephfs_client_key: "{{ lookup('file', 'generated/ceph_cephfs_client.key') }}"
   become:           true
   
-- name: Ensures /root/k8s/rbd dir exists
+- name: set ceph_cephfs_client_key fact
+  set_fact:
+    ceph_cephfs_admin_key:  "{{ lookup('file', 'generated/ceph_cephfs_admin.key') }}"
+  become:           true
+  
+- name: Ensures /root/k8s/cephfs dir exists
   file: 
     path:                   "{{ item }}"
     state:                  directory
@@ -17,7 +22,7 @@
     mode:                   '0755'
   with_items:
   - "/root/k8s"
-  - "/root/k8s/rbd"
+  - "/root/k8s/cephfs"
   become:                   true
   
 - name: Build csi rdb provisioner deployment files
@@ -34,12 +39,12 @@
       url:          "https://raw.githubusercontent.com/ceph/ceph-csi/v{{ ceph_csi_version }}/{{ item }}"
       dest:         "{{ csi_tmp_dir.path }}/{{ item | basename }}.origin"
       force:        true
-    with_items:     "{{ ceph_rbd_csi_files }}"
+    with_items:     "{{ ceph_cephfs_csi_files }}"
     changed_when:   false
     
-  - name: add namespace to rbd-csi deployment files
+  - name: add namespace to cephfs-csi deployment files
     shell:  |
-        awk -v  ns='rbd-csi'                                \
+        awk -v  ns='cephfs-csi'                             \
                'BEGIN {m=0; n=0;}                           \
                 {                                           \
                     p=1;                                    \
@@ -65,7 +70,7 @@
                         print "  namespace:",ns;            \
                     }                                       \
                 }' {{ csi_tmp_dir.path }}/{{ item | basename }}.origin > {{ csi_tmp_dir.path }}/{{ item | basename }}
-    with_items:     "{{ ceph_rbd_csi_files }}"
+    with_items:     "{{ ceph_cephfs_csi_files }}"
     changed_when:   false
     
   - name: update container image to 2 replicas if needed
@@ -73,19 +78,19 @@
       path:         "{{ csi_tmp_dir.path }}/{{ item | basename }}"
       regexp:       "replicas: [0-9]+"
       replace:      "replicas: {{ groups['worker'] | length }}"
-    with_items:     "{{ ceph_rbd_csi_files }}"
+    with_items:     "{{ ceph_cephfs_csi_files }}"
     when:           groups['worker'] | length < 3 
     changed_when:   false
     
-  - name: copy ceph-csi rbd deployment files
+  - name: copy ceph-csi cephfs deployment files
     copy:
       remote_src:   yes
       src:          "{{ csi_tmp_dir.path }}/{{ item | basename }}"
-      dest:         "/root/k8s/rbd/{{ item | basename }}"
+      dest:         "/root/k8s/cephfs/{{ item | basename }}"
       owner:        root
       group:        root
       mode:         '0644'
-    with_items:     "{{ ceph_rbd_csi_files }}"
+    with_items:     "{{ ceph_cephfs_csi_files }}"
     
   always:
   - name: delete temporary build directory
@@ -99,16 +104,16 @@
   
 - name: Generate ceph-csi storage class file
   template:
-    src:            "k8s-csi-rbd-storage-class.yml.j2"
-    dest:           "/root/k8s/rbd/k8s-csi-rbd-storage-class.yml"
+    src:            "k8s-csi-cephfs-storage-class.yml.j2"
+    dest:           "/root/k8s/cephfs/k8s-csi-cephfs-storage-class.yml"
   become:           true
   
-- name: apply ceph-csi rbd storage class deployment file
-  shell:            "kubectl apply -f '/root/k8s/rbd/k8s-csi-rbd-storage-class.yml'"
+- name: apply ceph-csi cephfs storage class deployment file
+  shell:            "kubectl apply -f '/root/k8s/cephfs/k8s-csi-cephfs-storage-class.yml'"
   become:           true
   
-- name: apply ceph-csi rbd deployment files
-  shell:            "kubectl apply -f '/root/k8s/rbd/{{ item | basename }}'"
-  with_items:       "{{ ceph_rbd_csi_files }}"
+- name: apply ceph-csi cephfs deployment files
+  shell:            "kubectl apply -f '/root/k8s/cephfs/{{ item | basename }}'"
+  with_items:       "{{ ceph_cephfs_csi_files }}"
   become:           true
   

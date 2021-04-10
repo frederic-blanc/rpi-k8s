@@ -1,0 +1,11 @@
+---
+- name: add csi cephfs provisioner
+  hosts: ceph_master
+  roles:
+  - deploy-k8s-csi-cephfs-provisioner/create-cephfs-pool
+  
+- name: add csi cephfs provisioner
+  hosts: master
+  roles:
+  - deploy-k8s-csi-cephfs-provisioner/add-csi-cephfs-provisioner
+  

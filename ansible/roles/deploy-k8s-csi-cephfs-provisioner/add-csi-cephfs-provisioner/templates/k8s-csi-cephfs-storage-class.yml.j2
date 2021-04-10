@@ -1,0 +1,67 @@
+---
+apiVersion:     v1
+kind:           Namespace
+metadata:
+  name:         cephfs-csi
+---
+apiVersion:     v1
+kind:           ConfigMap
+metadata:
+  name:         ceph-csi-config
+  namespace:    cephfs-csi
+data:
+  config.json: |-
+    [
+      {
+        "clusterID": "{{ ceph_mon.fsid }}",
+        "monitors": [
+{% for mon_addr in ceph_mon.mons | map(attribute='public_addrs.addrvec') | flatten | selectattr('type', 'equalto', 'v1') | list %}
+          "{{ mon_addr.addr }}"{% if loop.index != loop.length %},{% endif %}
+
+{% endfor %}
+        ]
+      }
+    ]
+---
+apiVersion:     v1
+kind:           ConfigMap
+metadata:
+  name:         ceph-csi-encryption-kms-config
+  namespace:    cephfs-csi
+data:
+  config.json: |-
+    {
+    }
+---
+apiVersion:     v1
+kind:           Secret
+metadata:
+  name:         csi-cephfs-secret
+  namespace:    cephfs-csi
+stringData:
+  userID:       {{ ceph.cephfs_pool.user }}
+  userKey:      {{ ceph_cephfs_client_key }}
+  adminID:      {{ ceph.cephfs_pool.user }}_admin
+  adminKey:     {{ ceph_cephfs_admin_key }}
+---
+apiVersion:     storage.k8s.io/v1
+kind:           StorageClass
+metadata:
+  name:         csi-cephfs-sc
+  namespace:    cephfs-csi
+provisioner:    cephfs.csi.ceph.com
+parameters:
+  clusterID:    {{ ceph_mon.fsid }}
+  fsName:       {{ ceph.cephfs_pool.name }}
+  pool:         {{ ceph.cephfs_pool.name }}_data
+  
+  csi.storage.k8s.io/provisioner-secret-name:               csi-cephfs-secret
+  csi.storage.k8s.io/provisioner-secret-namespace:          cephfs-csi
+  csi.storage.k8s.io/controller-expand-secret-name:         csi-cephfs-secret
+  csi.storage.k8s.io/controller-expand-secret-namespace:    cephfs-csi
+  csi.storage.k8s.io/node-stage-secret-name:                csi-cephfs-secret
+  csi.storage.k8s.io/node-stage-secret-namespace:           cephfs-csi
+reclaimPolicy:          Delete
+allowVolumeExpansion:   true
+mountOptions:
+  - debug

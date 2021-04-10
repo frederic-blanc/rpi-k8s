@@ -1,0 +1,77 @@
+---
+- name: create cephfs pool
+  block:
+  - name: delete previous resources if they exist
+    shell:          "ceph osd pool delete {{ item }} {{ item }} --yes-i-really-really-mean-it"
+    with_items:
+    - "{{ ceph.cephfs_pool.name }}_data"
+    - "{{ ceph.cephfs_pool.name }}_metadata"
+    
+  - name: create pool for cephfs data fs
+    shell:          "ceph osd pool create {{ ceph.cephfs_pool.name }}_data      {{ ceph.cephfs_pool.pg_num_data     | default(ceph.osd_pool.default_pg_num) }} {{ ceph.cephfs_pool.pgp_num_data     | default(ceph.osd_pool.default_pgp_num) }} replicated"
+    
+  - name: create pool for cephfs metadata fs
+    shell:          "ceph osd pool create {{ ceph.cephfs_pool.name }}_metadata  {{ ceph.cephfs_pool.pg_num_metadata | default(ceph.osd_pool.default_pg_num) }} {{ ceph.cephfs_pool.pgp_num_metadata | default(ceph.osd_pool.default_pgp_num) }} replicated"
+    
+  - name: create cephfs fs
+    shell:          "ceph fs new {{ ceph.cephfs_pool.name }} {{ ceph.cephfs_pool.name }}_metadata  {{ ceph.cephfs_pool.name }}_data"
+    
+  become:           true
+  become_user:      ceph
+  
+- name: create pool user keyring
+  block:
+  - name: delete pool keyring
+    file:
+      path:         "/etc/ceph/ceph.client.{{ ceph.cephfs_pool.name }}.keyring"
+      state:        absent
+    
+  - name: delete pool admin keyring
+    file:
+      path:         "/etc/ceph/ceph.client.{{ ceph.cephfs_pool.name }}_admin.keyring"
+      state:        absent
+    
+  - name: create new keyring for pool
+    shell:          "ceph auth get-or-create client.{{ ceph.cephfs_pool.user }}         mon 'allow r' mds 'allow r' osd 'allow rwx pool={{ ceph.cephfs_pool.name }}_data,allow rwx pool={{ ceph.cephfs_pool.name }}_metadata' -o /etc/ceph/ceph.client.{{ ceph.cephfs_pool.name }}.keyring"
+    
+  - name: create new admin keyring for pool
+    shell:          "ceph auth get-or-create client.{{ ceph.cephfs_pool.user }}_admin   mon 'allow *' mds 'allow *' osd 'allow *   pool={{ ceph.cephfs_pool.name }}_data,allow *   pool={{ ceph.cephfs_pool.name }}_metadata' mgr 'allow *'  -o /etc/ceph/ceph.client.{{ ceph.cephfs_pool.user }}_admin.keyring"
+    
+  become:           true
+  become_user:      ceph
+  
+- name: retrieve ceph mon data
+  shell:            "ceph mon dump --format json"
+  register:         dump_command
+  become:           true
+  
+- name: Copy ceph mon data to local file
+  copy:
+    content:        "{{ dump_command.stdout }}" 
+    dest:           "files/generated/ceph_mon_dump.json"
+  delegate_to:      localhost
+  
+- name: get cephfs client key
+  shell:            "ceph auth print-key client.{{ ceph.cephfs_pool.user }}"
+  register:         ceph_cephfs_client_key_command
+  changed_when:     false
+  become:           true
+  
+- name: Copy ceph cephfs client key data to local file
+  copy:
+    content:        "{{ ceph_cephfs_client_key_command.stdout }}" 
+    dest:           "files/generated/ceph_cephfs_client.key"
+  delegate_to:      localhost
+  
+- name: get cephfs admin key
+  shell:            "ceph auth print-key client.{{ ceph.cephfs_pool.user }}_admin"
+  register:         ceph_cephfs_admin_key_command
+  changed_when:     false
+  become:           true
+  
+- name: Copy ceph cephfs admin key data to local file
+  copy:
+    content:        "{{ ceph_cephfs_admin_key_command.stdout }}" 
+    dest:           "files/generated/ceph_cephfs_admin.key"
+  delegate_to:      localhost
+  

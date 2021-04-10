@@ -1,0 +1,7 @@
+---
+ceph_csi_version: "3.2.1"
+ceph_cephfs_csi_files:
+- "deploy/cephfs/kubernetes/csi-nodeplugin-rbac.yaml"
+- "deploy/cephfs/kubernetes/csi-provisioner-rbac.yaml"
+- "deploy/cephfs/kubernetes/csi-cephfsplugin.yaml"
+- "deploy/cephfs/kubernetes/csi-cephfsplugin-provisioner.yaml"

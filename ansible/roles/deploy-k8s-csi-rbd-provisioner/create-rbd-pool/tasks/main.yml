@@ -7,8 +7,8 @@
   - name: create pool
     shell:          "ceph osd pool create   {{ ceph.rbd_pool.name }}    {{ ceph.rbd_pool.pg_num  | default(ceph.osd_pool.default_pg_num) }} {{ ceph.rbd_pool.pgp_num | default(ceph.osd_pool.default_pgp_num) }} replicated"
     
-  - name: create bootstrap-osd ceph keyring
-    shell:          "ceph osd pool application  enable  {{ ceph.rbd_pool.name }} rbd"
+  - name: init rbd pool
+    shell:          "rbd      pool init                 {{ ceph.rbd_pool.name }}"
     
   become:           true
   become_user:      ceph
@@ -21,14 +21,7 @@
       state:        absent
     
   - name: create new keysring for pool
-    shell:          "ceph auth get-or-create client.{{ ceph.rbd_pool.user }} mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool={{ ceph.rbd_pool.name }}' -o /etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
-    
-  - name: copy pool keyring to local
-    fetch:
-      src:          "/etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
-      dest:         "files/generated/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
-      flat:         yes
-    
+    shell:          "ceph auth get-or-create client.{{ ceph.rbd_pool.user }} mon 'profile rbd' osd 'profile rbd pool={{ ceph.rbd_pool.name }}'  mgr 'profile rbd pool={{ ceph.rbd_pool.name }}' -o /etc/ceph/ceph.client.{{ ceph.rbd_pool.name }}.keyring"
   become:           true
   become_user:      ceph
   
@@ -37,9 +30,21 @@
   register:         dump_command
   become:           true
   
-- name: Copy join command to local file
+- name: Copy ceph mon data to local file
   copy:
     content:        "{{ dump_command.stdout }}" 
     dest:           "files/generated/ceph_mon_dump.json"
+  delegate_to:      localhost
+  
+- name: get rbd client key
+  shell:            "ceph auth print-key client.{{ ceph.rbd_pool.user }}"
+  register:         ceph_rbd_client_key_command
+  changed_when:     false
+  become:           true
+  
+- name: Copy ceph rbd client key data to local file
+  copy:
+    content:        "{{ ceph_rbd_client_key_command.stdout }}" 
+    dest:           "files/generated/ceph_rbd_client.key"
   delegate_to:      localhost
   

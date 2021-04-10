@@ -7,12 +7,12 @@ metadata:
 kind:               PersistentVolumeClaim
 apiVersion:         v1
 metadata:
-  name:             dockerhub-rdb-claim
+  name:             dockerhub-cephfs-claim
   namespace:        dockerhub
 spec:
   accessModes:
-  - ReadWriteOnce
-  storageClassName: csi-rbd-sc
+  - ReadWriteMany
+  storageClassName: csi-cephfs-sc
   resources:
     requests:
       storage:      {{ docker_registry.size }}
@@ -43,7 +43,7 @@ spec:
           httpGet:
             path:       /v2/
             port:       5000
-          initialDelaySeconds: 3
+          initialDelaySeconds:  3
           periodSeconds:        3
         volumeMounts:
         - mountPath:    /var/lib/registry
@@ -51,7 +51,7 @@ spec:
       volumes:
       - name:           dockerhub-data
         persistentVolumeClaim:
-          claimName:    dockerhub-rdb-claim
+          claimName:    dockerhub-cephfs-claim
 ---
 apiVersion:         v1
 kind:               Service
@@ -82,7 +82,7 @@ spec:
   tls:
   - hosts:
     - {{ dockerhub_url }}
-    secretName:     tlssecret
+    secretName:         tlssecret
   rules:
   - http:
       paths:
