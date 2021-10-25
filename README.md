@@ -6,3 +6,5 @@ I use the [20.04 LTS version](http://cdimage.ubuntu.com/releases/20.04/release/u
 To manage ip setting and an ubuntu account not expired (as well as a non update kernel at boot first, this will be managed by the ansible install), we use cloud-init files. 
 
 Template files can be found in the cloud-init folder and it must copied in the /boot/firmware partition just after the image burn. Just Change your targeted IP address in the network-config file.
+
+[](https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Kubernetes_logo.svg/langfr-290px-Kubernetes_logo.svg.png)
